@@ -21,10 +21,11 @@
  */
 
 // enable for keyboard debugging
-#ifdef DEBUG_MSG
-//#define DEBUG_VERBOSE
+// #ifdef DEBUG_MSG
+#define DEBUG_VERBOSE
 #define DEBUG_LITE
-#endif
+// #define DEBUG
+// #endif
 
 #include <IOKit/IOLib.h>
 #include <IOKit/hidsystem/IOHIDParameter.h>
@@ -40,13 +41,13 @@
 #include <libkern/version.h>
 
 //REVIEW: avoids problem with Xcode 5.1.0 where -dead_strip eliminates these required symbols
-#include <libkern/OSKextLib.h>
-void* _org_rehabman_dontstrip_[] =
-{
-    (void*)&OSKextGetCurrentIdentifier,
-    (void*)&OSKextGetCurrentLoadTag,
-    (void*)&OSKextGetCurrentVersionString,
-};
+//#include <libkern/OSKextLib.h>
+//void* _org_rehabman_dontstrip_[] =
+//{
+//    (void*)&OSKextGetCurrentIdentifier,
+//    (void*)&OSKextGetCurrentLoadTag,
+//    (void*)&OSKextGetCurrentVersionString,
+//};
 
 // Constants for Info.plist settings
 
@@ -491,12 +492,12 @@ bool ApplePS2Keyboard::start(IOService * provider)
     if (_provider) do
     {
         // check for brightness methods
-        if (kIOReturnSuccess != _provider->validateObject("KBCL") || kIOReturnSuccess != _provider->validateObject("KBCM") || kIOReturnSuccess != _provider->validateObject("KBQC"))
+        if (kIOReturnSuccess != _provider->validateObject("_BCL") || kIOReturnSuccess != _provider->validateObject("_BCM") || kIOReturnSuccess != _provider->validateObject("_BQC"))
         {
             break;
         }
         // methods are there, so now try to collect brightness levels
-        if (kIOReturnSuccess != _provider->evaluateObject("KBCL", &result))
+        if (kIOReturnSuccess != _provider->evaluateObject("_BCL", &result))
         {
             DEBUG_LOG("ps2br: KBCL returned error\n");
             break;
@@ -1286,12 +1287,14 @@ void ApplePS2Keyboard::packetReady()
         {
             if (!_macroInversion || !invertMacros(packet))
             {
+                
                 // normal packet
                 dispatchKeyboardEventWithPacket(packet);
             }
         }
         else
         {
+            
             // command/reset packet
             ////initKeyboard();
         }
@@ -1439,7 +1442,7 @@ void ApplePS2Keyboard::modifyScreenBrightness(int adbKeyCode, bool goingDown)
     
     // get current brightness level
     UInt32 result;
-    if (kIOReturnSuccess != _provider->evaluateInteger("KBQC", &result))
+    if (kIOReturnSuccess != _provider->evaluateInteger("_BQC", &result))
     {
         DEBUG_LOG("ps2br: KBQC returned error\n");
         return;
@@ -1474,7 +1477,7 @@ void ApplePS2Keyboard::modifyScreenBrightness(int adbKeyCode, bool goingDown)
         DEBUG_LOG("ps2br: OSNumber::withNumber failed\n");
         return;
     }
-    if (goingDown && kIOReturnSuccess != _provider->evaluateObject("KBCM", NULL, (OSObject**)&num, 1))
+    if (goingDown && kIOReturnSuccess != _provider->evaluateObject("_BCM", NULL, (OSObject**)&num, 1))
     {
         DEBUG_LOG("ps2br: KBCM returned error\n");
     }

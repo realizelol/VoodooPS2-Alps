@@ -67,6 +67,7 @@ bool VoodooPS2TouchPadBase::init(OSDictionary * dict)
 
     // set defaults for configuration items
     
+    //z_finger = 0;
 	/*z_finger=45;
 	divisorx=divisory=1;
 	ledge=1700;
@@ -279,6 +280,10 @@ bool VoodooPS2TouchPadBase::start( IOService * provider )
         if (dragTimer)
             pWorkLoop->addEventSource(dragTimer);
     }
+    
+    scrollDebounceTIMER = IOTimerEventSource::timerEventSource(this, OSMemberFunctionCast(IOTimerEventSource::Action, this, &VoodooPS2TouchPadBase::onScrollDebounceTimer));
+    if(scrollDebounceTIMER)
+        pWorkLoop->addEventSource(scrollDebounceTIMER);
     
     pWorkLoop->addEventSource(_cmdGate);
     
@@ -605,6 +610,11 @@ void VoodooPS2TouchPadBase::onDragTimer(void)
     //TODO: find other places the timer should be cancelled.
 }
 
+
+void VoodooPS2TouchPadBase::onScrollDebounceTimer(void)
+{
+    scrolldebounce = false;
+}
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void VoodooPS2TouchPadBase::initTouchPad()
@@ -737,6 +747,7 @@ void VoodooPS2TouchPadBase::setParamPropertiesGated(OSDictionary * config)
         {"ClickPadClickTime",               &clickpadclicktime},
         {"MiddleClickTime",                 &_maxmiddleclicktime},
         {"DragExitDelayTime",               &dragexitdelay},
+        {"ScrollExitDelayTime",             &scrollexitdelay},
     };
     
     int oldmousecount = mousecount;

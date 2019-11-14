@@ -109,6 +109,7 @@ protected:
 	uint64_t touchtime;
 	uint64_t untouchtime;
 	bool wasdouble,wastriple;
+    bool scrolldebounce;
     uint64_t keytime;
     bool ignoreall;
     UInt32 passbuttons;
@@ -147,6 +148,7 @@ protected:
 
     // momentum scroll state
     bool momentumscroll;
+    bool wasScroll = false;
     SimpleAverage<int, 32> dy_history;
     SimpleAverage<uint64_t, 32> time_history;
     IOTimerEventSource* scrollTimer;
@@ -163,7 +165,10 @@ protected:
 
     // timer for drag delay
     uint64_t dragexitdelay;
+    uint64_t scrollexitdelay;
     IOTimerEventSource* dragTimer;
+    
+    IOTimerEventSource* scrollDebounceTIMER;
     
     SimpleAverage<int, 5> x_avg;
     SimpleAverage<int, 5> y_avg;
@@ -225,9 +230,10 @@ protected:
     virtual void touchpadShutdown() {};
     virtual void initTouchPad();
 
-    inline bool isFingerTouch(int z) { return z>z_finger && z<zlimit; }
+    inline bool isFingerTouch(int z) { return z>z_finger; }
 
     void onScrollTimer(void);
+    void onScrollDebounceTimer(void);
     void onButtonTimer(void);
     void onDragTimer(void);
 
