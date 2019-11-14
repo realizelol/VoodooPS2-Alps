@@ -2957,9 +2957,11 @@ void ALPS::dispatchEventsWithInfo(int xraw, int yraw, int z, int fingers, UInt32
         case MODE_MTOUCH:
             switch (fingers) {
                 case 1:
+                    if (last_fingers != fingers) break;
+                    
                     // transition from multitouch to single touch
                     // continue moving with the primary finger
-                    if (!wsticky && !scrolldebounce)
+                    if (!wsticky && !scrolldebounce && !ignoresingle)
                     {
                         cancelTimer(scrollDebounceTIMER);
                         setTimerTimeout(scrollDebounceTIMER, scrollexitdelay);
@@ -2970,6 +2972,10 @@ void ALPS::dispatchEventsWithInfo(int xraw, int yraw, int z, int fingers, UInt32
                         touchmode=MODE_MOVE;
                         break;
                     }
+                    
+                    if (ignoresingle)
+                        ignoresingle--;
+                    
                     break;
                 case 2: // two finger
                     if (last_fingers != fingers) {
@@ -3010,6 +3016,7 @@ void ALPS::dispatchEventsWithInfo(int xraw, int yraw, int z, int fingers, UInt32
                     {
                         dispatchScrollWheelEventX(wvdivisor ? dy / wvdivisor : 0, (whdivisor && hscroll) ? -dx / whdivisor : 0, 0, now_abs);
                         dx = dy = 0;
+                        ignoresingle = 3;
                     }
                     break;
                     
@@ -3113,14 +3120,15 @@ void ALPS::dispatchEventsWithInfo(int xraw, int yraw, int z, int fingers, UInt32
     if (isFingerTouch(z)) {
         // taps don't count if too close to typing or if currently in momentum scroll
         if ((!palm_wt || now_ns - keytime >= maxaftertyping) && !momentumscrollcurrent) {
+            
             if (!isTouchMode()) {
                 touchtime = now_ns;
                 touchx = x;
                 touchy = y;
             }
             DEBUG_LOG("PS2:Checking Fingers");
-            wasdouble = fingers == 2;// && !scrolldebounce;
-            wastriple = fingers == 3;// && !scrolldebounce;
+            wasdouble = fingers == 2 || (wasdouble && last_fingers != fingers);// && !scrolldebounce;
+            wastriple = fingers == 3 || (wastriple && last_fingers != fingers);// && !scrolldebounce;
         }
         
         if(!scrolldebounce && momentumscrollcurrent){
@@ -3144,34 +3152,6 @@ void ALPS::dispatchEventsWithInfo(int xraw, int yraw, int z, int fingers, UInt32
         touchmode = MODE_MTOUCH;
     }
     
-//    if (scroll && cscrolldivisor) {
-//        if (touchmode == MODE_NOTOUCH && z > z_finger && y > tedge && (ctrigger == 1 || ctrigger == 9))
-//            touchmode = MODE_CSCROLL;
-//        if (touchmode == MODE_NOTOUCH && z > z_finger && y > tedge && x > redge && (ctrigger == 2))
-//            touchmode = MODE_CSCROLL;
-//        if (touchmode == MODE_NOTOUCH && z > z_finger && x > redge && (ctrigger == 3 || ctrigger == 9))
-//            touchmode = MODE_CSCROLL;
-//        if (touchmode == MODE_NOTOUCH && z > z_finger && x > redge && y < bedge && (ctrigger == 4))
-//            touchmode = MODE_CSCROLL;
-//        if (touchmode == MODE_NOTOUCH && z > z_finger && y < bedge && (ctrigger == 5 || ctrigger == 9))
-//            touchmode = MODE_CSCROLL;
-//        if (touchmode == MODE_NOTOUCH && z > z_finger && y < bedge && x < ledge && (ctrigger == 6))
-//            touchmode = MODE_CSCROLL;
-//        if (touchmode == MODE_NOTOUCH && z > z_finger && x < ledge && (ctrigger == 7 || ctrigger == 9))
-//            touchmode = MODE_CSCROLL;
-//        if (touchmode == MODE_NOTOUCH && z > z_finger && x < ledge && y > tedge && (ctrigger == 8))
-//            touchmode = MODE_CSCROLL;
-//    }
-//    if ((MODE_NOTOUCH == touchmode || (MODE_HSCROLL == touchmode && y >= bedge)) &&
-//        z > z_finger && x > redge && vscrolldivisor && scroll && fingers == 2) {
-//        touchmode = MODE_VSCROLL;
-//        scrollrest = 0;
-//    }
-//    if ((MODE_NOTOUCH == touchmode || (MODE_VSCROLL == touchmode && x <= redge)) &&
-//        z > z_finger && y < bedge && hscrolldivisor && scroll && fingers == 2) {
-//        touchmode = MODE_HSCROLL;
-//        scrollrest = 0;
-//    }
     if (touchmode == MODE_NOTOUCH && z > z_finger && !scrolldebounce) {
         touchmode = MODE_MOVE;
     }

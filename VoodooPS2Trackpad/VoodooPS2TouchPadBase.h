@@ -104,6 +104,7 @@ protected:
 	int lastx, lasty, last_fingers, b4last;
     UInt32 lastbuttons;
     int ignoredeltas;
+    int ignoresingle;
 	int xrest, yrest, scrollrest;
     int touchx, touchy;
 	uint64_t touchtime;
