@@ -2912,9 +2912,10 @@ void ALPS::dispatchEventsWithInfo(int xraw, int yraw, int z, int fingers, UInt32
     // erasing here (time of touch) might be useful for certain gestures...
     
     // cancel tap if touch point moves too far
-    if (isTouchMode() && isFingerTouch(z)) {
-        int dx = xraw > touchx ? xraw - touchx : touchx - xraw;
-        int dy = yraw > touchy ? touchy - yraw : yraw - touchy;
+    if (isTouchMode() && isFingerTouch(z) && last_fingers == fingers) {
+        int dy = abs(touchy-y);
+        int dx = abs(touchx-x);
+        DEBUG_LOG("PS2: Cancel DX: %d Cancel DY: %d", dx, dy);
         if (!wasdouble && !wastriple && (dx > tapthreshx || dy > tapthreshy)) {
             touchtime = 0;
         }
@@ -3014,7 +3015,8 @@ void ALPS::dispatchEventsWithInfo(int xraw, int yraw, int z, int fingers, UInt32
                     }
                     if (0 != dy || 0 != dx)
                     {
-                        dispatchScrollWheelEventX(wvdivisor ? dy / wvdivisor : 0, (whdivisor && hscroll) ? -dx / whdivisor : 0, 0, now_abs);
+                        if (!touchtime)
+                            dispatchScrollWheelEventX(wvdivisor ? dy / wvdivisor : 0, (whdivisor && hscroll) ? -dx / whdivisor : 0, 0, now_abs);
                         dx = dy = 0;
                         ignoresingle = 3;
                     }
@@ -3123,9 +3125,13 @@ void ALPS::dispatchEventsWithInfo(int xraw, int yraw, int z, int fingers, UInt32
             
             if (!isTouchMode()) {
                 touchtime = now_ns;
+            }
+            
+            if (last_fingers < fingers) {
                 touchx = x;
                 touchy = y;
             }
+            
             DEBUG_LOG("PS2:Checking Fingers");
             wasdouble = fingers == 2 || (wasdouble && last_fingers != fingers);// && !scrolldebounce;
             wastriple = fingers == 3 || (wastriple && last_fingers != fingers);// && !scrolldebounce;
