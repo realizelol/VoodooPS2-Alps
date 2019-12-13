@@ -2961,7 +2961,9 @@ void ALPS::dispatchEventsWithInfo(int xraw, int yraw, int z, int fingers, UInt32
                     if (last_fingers != fingers) break;
                     
                     // transition from multitouch to single touch
-                    // continue moving with the primary finger
+                    // user could be letting go - ignore single for a few
+                    // packets to see if they completely let go before
+                    // starting to move w/ single finger
                     if (!wsticky && !scrolldebounce && !ignoresingle)
                     {
                         cancelTimer(scrollDebounceTIMER);
@@ -2974,6 +2976,7 @@ void ALPS::dispatchEventsWithInfo(int xraw, int yraw, int z, int fingers, UInt32
                         break;
                     }
                     
+                    // Decrement ignore single counter
                     if (ignoresingle)
                         ignoresingle--;
                     
@@ -3015,6 +3018,8 @@ void ALPS::dispatchEventsWithInfo(int xraw, int yraw, int z, int fingers, UInt32
                     }
                     if (0 != dy || 0 != dx)
                     {
+                        // Don't move unless user is moved fingers far enough to know this wasn't a two finger tap
+                        // Gets rid of scrolling while trying to tap 
                         if (!touchtime)
                             dispatchScrollWheelEventX(wvdivisor ? dy / wvdivisor : 0, (whdivisor && hscroll) ? -dx / whdivisor : 0, 0, now_abs);
                         dx = dy = 0;

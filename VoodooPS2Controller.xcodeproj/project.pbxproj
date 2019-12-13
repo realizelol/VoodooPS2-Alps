@@ -637,6 +637,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "VoodooPS2Controller/VoodooPS2Controller-Prefix.pch";
@@ -654,6 +655,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "VoodooPS2Controller/VoodooPS2Controller-Prefix.pch";
@@ -783,7 +785,7 @@
 				84167823161B55B2002C60E6 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
+			defaultConfigurationName = Release;
 		};
 		84167824161B55B2002C60E6 /* Build configuration list for PBXNativeTarget "VoodooPS2Controller" */ = {
 			isa = XCConfigurationList;
@@ -792,7 +794,7 @@
 				84167826161B55B2002C60E6 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
+			defaultConfigurationName = Release;
 		};
 		84167838161B5613002C60E6 /* Build configuration list for PBXNativeTarget "VoodooPS2Keyboard" */ = {
 			isa = XCConfigurationList;
@@ -801,7 +803,7 @@
 				8416783A161B5613002C60E6 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
+			defaultConfigurationName = Release;
 		};
 		84167860161B56C4002C60E6 /* Build configuration list for PBXNativeTarget "VoodooPS2Trackpad" */ = {
 			isa = XCConfigurationList;
@@ -810,7 +812,7 @@
 				84167862161B56C4002C60E6 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
+			defaultConfigurationName = Release;
 		};
 		84C337A31698B693009B8177 /* Build configuration list for PBXNativeTarget "VoodooPS2Daemon" */ = {
 			isa = XCConfigurationList;
@@ -819,7 +821,7 @@
 				84C337A21698B693009B8177 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
+			defaultConfigurationName = Release;
 		};
 		84F42502161B5A4900777765 /* Build configuration list for PBXNativeTarget "synapticsconfigload" */ = {
 			isa = XCConfigurationList;
@@ -828,7 +830,7 @@
 				84F42504161B5A4900777765 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
