@@ -7,7 +7,7 @@
 #include <IOKit/IOWorkLoop.h>
 #include <IOKit/IOTimerEventSource.h>
 #include "VoodooPS2Controller.h"
-#include "VoodooPS2TouchPadBase.h"
+#include "VoodooPS2AlpsTrackpadBase.h"
 
 // =============================================================================
 // VoodooPS2TouchPadBase Class Implementation
@@ -64,140 +64,6 @@ bool VoodooPS2TouchPadBase::init(OSDictionary * dict)
     _packetByteCount = 0;
     _lastdata = 0;
     _cmdGate = 0;
-
-    // set defaults for configuration items
-    
-    //z_finger = 0;
-	/*z_finger=45;
-	divisorx=divisory=1;
-	ledge=1700;
-	redge=5200;
-	tedge=4200;
-	bedge=1700;
-	vscrolldivisor=30;
-	hscrolldivisor=30;
-	cscrolldivisor=0;
-	ctrigger=0;
-	centerx=3000;
-	centery=3000;
-	maxtaptime=130000000;
-	maxdragtime=230000000;
-	hsticky=0;
-	vsticky=0;
-	wsticky=0;
-	tapstable=1;
-	wlimit=9;
-	wvdivisor=30;
-	whdivisor=30;
-	clicking=true;
-    rtap=true;
-	dragging=true;
-    threefingervertswipe=true;
-    threefingerhorizswipe=true;
-	draglock=false;
-    draglocktemp=0;
-	hscroll=vscroll=true;
-	scroll=true;
-    outzone_wt = palm = palm_wt = false;
-    zlimit = 100;
-    noled = false;
-    maxaftertyping = 500000000;
-    mousemultiplierx = 20;
-    mousemultipliery = 20;
-    mousescrollmultiplierx = 20;
-    mousescrollmultipliery = 20;
-    mousemiddlescroll = true;
-    wakedelay = 1000;
-    skippassthru = false;
-    tapthreshx = tapthreshy = 50;
-    dblthreshx = dblthreshy = 100;
-    zonel = 1700;  zoner = 5200;
-    zonet = 99999; zoneb = 0;
-    diszl = 0; diszr = 1700;
-    diszt = 99999; diszb = 4200;
-    diszctrl = 0;
-    _resolution = 2300;
-    _scrollresolution = 2300;
-    swipedx = swipedy = 800;
-    rczl = 3800; rczt = 2000;
-    rczr = 99999; rczb = 0;
-    _buttonCount = 2;
-    swapdoubletriple = false;
-    draglocktempmask = 0x0100010; // default is Command key
-    clickpadclicktime = 300000000; // 300ms default
-    clickpadtrackboth = true;
-    
-    bogusdxthresh = 400;
-    bogusdythresh = 350;
-    
-    scrolldxthresh = 10;
-    scrolldythresh = 10;
-    
-    immediateclick = true;
-
-    xupmm = yupmm = 50; // 50 is just arbitrary, but same
-    
-    _extendedwmode=false;
-    
-    // intialize state
-    
-	lastx=0;
-	lasty=0;
-    last_fingers=0;
-	xrest=0;
-	yrest=0;
-    lastbuttons=0;
-    
-    // intialize state for secondary packets/extendedwmode
-    xrest2=0;
-    yrest2=0;
-    clickedprimary=false;
-    lastx2=0;
-    lasty2=0;
-    tracksecondary=false;
-    
-    // state for middle button
-    _buttonTimer = 0;
-    _mbuttonstate = STATE_NOBUTTONS;
-    _pendingbuttons = 0;
-    _buttontime = 0;
-    _maxmiddleclicktime = 100000000;
-    _fakemiddlebutton = true;
-    
-    ignoredeltas=0;
-    ignoredeltasstart=0;
-	scrollrest=0;
-    touchtime=untouchtime=0;
-	wastriple=wasdouble=false;
-    keytime = 0;
-    ignoreall = false;
-    passbuttons = 0;
-    passthru = false;
-    ledpresent = false;
-    clickpadtype = 0;
-    _clickbuttons = 0;
-    _reportsv = false;
-    mousecount = 0;
-    usb_mouse_stops_trackpad = true;
-    _modifierdown = 0;
-    scrollzoommask = 0;
-    
-    inSwipeLeft=inSwipeRight=inSwipeDown=inSwipeUp=0;
-    xmoved=ymoved=0;
-    
-    momentumscroll = true;
-    scrollTimer = 0;
-    momentumscrolltimer = 10000000;
-    momentumscrollthreshy = 7;
-    momentumscrollmultiplier = 98;
-    momentumscrolldivisor = 100;
-    momentumscrollsamplesmin = 3;
-    momentumscrollcurrent = 0;
-    
-    dragexitdelay = 100000000;
-    dragTimer = 0;
-    
-	touchmode=MODE_NOTOUCH;*/
     
 	IOLog("VoodooPS2TouchPad Base Driver loaded...\n");
     
@@ -262,7 +128,6 @@ bool VoodooPS2TouchPadBase::start( IOService * provider )
     //
     if (_buttonCount >= 3)
     {
-        _buttonTimer = IOTimerEventSource::timerEventSource(this, OSMemberFunctionCast(IOTimerEventSource::Action, this, &VoodooPS2TouchPadBase::onButtonTimer));
         if (!_buttonTimer)
         {
             _device->release();
@@ -270,29 +135,6 @@ bool VoodooPS2TouchPadBase::start( IOService * provider )
         }
         pWorkLoop->addEventSource(_buttonTimer);
     }
-    
-    //
-    // Setup dragTimer event source
-    //
-    if (dragexitdelay)
-    {
-        dragTimer = IOTimerEventSource::timerEventSource(this, OSMemberFunctionCast(IOTimerEventSource::Action, this, &VoodooPS2TouchPadBase::onDragTimer));
-        if (dragTimer)
-            pWorkLoop->addEventSource(dragTimer);
-    }
-    
-    scrollDebounceTIMER = IOTimerEventSource::timerEventSource(this, OSMemberFunctionCast(IOTimerEventSource::Action, this, &VoodooPS2TouchPadBase::onScrollDebounceTimer));
-    if(scrollDebounceTIMER)
-        pWorkLoop->addEventSource(scrollDebounceTIMER);
-    
-    pWorkLoop->addEventSource(_cmdGate);
-    
-    //
-    // Setup scrolltimer event source
-    //
-    scrollTimer = IOTimerEventSource::timerEventSource(this, OSMemberFunctionCast(IOTimerEventSource::Action, this, &VoodooPS2TouchPadBase::onScrollTimer));
-    if (scrollTimer)
-        pWorkLoop->addEventSource(scrollTimer);
     
     //
     // Lock the controller during initialization
@@ -360,12 +202,6 @@ void VoodooPS2TouchPadBase::stop( IOService * provider )
     IOWorkLoop* pWorkLoop = getWorkLoop();
     if (pWorkLoop)
     {
-        if (scrollTimer)
-        {
-            pWorkLoop->removeEventSource(scrollTimer);
-            scrollTimer->release();
-            scrollTimer = 0;
-        }
         if (_buttonTimer)
         {
             pWorkLoop->removeEventSource(_buttonTimer);
@@ -416,44 +252,6 @@ void VoodooPS2TouchPadBase::stop( IOService * provider )
     OSSafeReleaseNULL(_device);
     
 	super::stop(provider);
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-void VoodooPS2TouchPadBase::onScrollTimer(void)
-{
-    //
-    // This will be invoked by our workloop timer event source to implement
-    // momentum scroll.
-    //
-    
-    if (!momentumscrollcurrent)
-        return;
-    
-    uint64_t now_abs;
-	clock_get_uptime(&now_abs);
-    
-    int64_t dy64 = momentumscrollcurrent / (int64_t)momentumscrollinterval + momentumscrollrest2;
-    int dy = (int)dy64;
-    if (abs(dy) > momentumscrollthreshy)
-    {
-        // dispatch the scroll event
-        dispatchScrollWheelEventX(wvdivisor ? dy / wvdivisor : 0, 0, 0, now_abs);
-        momentumscrollrest2 = wvdivisor ? dy % wvdivisor : 0;
-    
-        // adjust momentumscrollcurrent
-        momentumscrollcurrent = momentumscrollcurrent * momentumscrollmultiplier + momentumscrollrest1;
-        momentumscrollrest1 = momentumscrollcurrent % momentumscrolldivisor;
-        momentumscrollcurrent /= momentumscrolldivisor;
-        
-        // start another timer
-        setTimerTimeout(scrollTimer, momentumscrolltimer);
-    }
-    else
-    {
-        // no more scrolling...
-        momentumscrollcurrent = 0;
-    }
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -588,35 +386,6 @@ UInt32 VoodooPS2TouchPadBase::middleButton(UInt32 buttons, uint64_t now_abs, MBC
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void VoodooPS2TouchPadBase::onDragTimer(void)
-{
-    if (MODE_DRAGNOTOUCH==touchmode)
-    {
-        touchmode=MODE_NOTOUCH;
-        
-        uint64_t now_abs;
-        clock_get_uptime(&now_abs);
-        UInt32 buttons = middleButton(lastbuttons & ~0x01, now_abs, fromPassthru);
-        DEBUG_LOG("ps2: onDragTimer, button = %d\n", buttons);
-        dispatchRelativePointerEventX(0, 0, buttons, now_abs);
-    }
-    else
-    {
-        //REVIEW: for debugging...
-        IOLog("rehab: onDragTimer called with unexpected mode = %d\n", touchmode);
-    }
-    //TODO: cancel dragnotouch mode, revert to notouch
-    //TODO: send lbutton up without modifying other buttons
-    //TODO: find other places the timer should be cancelled.
-}
-
-
-void VoodooPS2TouchPadBase::onScrollDebounceTimer(void)
-{
-    scrolldebounce = false;
-}
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 void VoodooPS2TouchPadBase::initTouchPad()
 {
     //
@@ -695,10 +464,6 @@ void VoodooPS2TouchPadBase::setParamPropertiesGated(OSDictionary * config)
         {"HIDScrollZoomModifierMask",       &scrollzoommask},
         {"ButtonCount",                     &_buttonCount},
         {"DragLockTempMask",                &draglocktempmask},
-        {"MomentumScrollThreshY",           &momentumscrollthreshy},
-        {"MomentumScrollMultiplier",        &momentumscrollmultiplier},
-        {"MomentumScrollDivisor",           &momentumscrolldivisor},
-        {"MomentumScrollSamplesMin",        &momentumscrollsamplesmin},
         {"FingerChangeIgnoreDeltas",        &ignoredeltasstart},
         {"BogusDeltaThreshX",               &bogusdxthresh},
         {"BogusDeltaThreshY",               &bogusdythresh},
@@ -706,8 +471,6 @@ void VoodooPS2TouchPadBase::setParamPropertiesGated(OSDictionary * config)
         {"UnitsPerMMY",                     &yupmm},
         {"ScrollDeltaThreshX",              &scrolldxthresh},
         {"ScrollDeltaThreshY",              &scrolldythresh},
-        {"TrackpadThreeFingerVertSwipeGesture", &threefingervertswipe},
-        {"TrackpadThreeFingerHorizSwipeGesture", &threefingerhorizswipe},
 	};
 	const struct {const char *name; int *var;} boolvars[]={
 		{"StickyHorizontalScrolling",		&hsticky},
@@ -729,9 +492,6 @@ void VoodooPS2TouchPadBase::setParamPropertiesGated(OSDictionary * config)
         {"Dragging",                        &dragging},
         {"TrackpadRightClick",              &rtap},
         {"DragLock",                        &draglock},
-        {"TrackpadHorizScroll",             &hscroll},
-        {"TrackpadVertScroll",              &vscroll},
-        {"TrackpadScroll",                  &scroll},
         {"OutsidezoneNoAction When Typing", &outzone_wt},
         {"PalmNoAction Permanent",          &palm},
         {"PalmNoAction When Typing",        &palm_wt},
@@ -746,8 +506,6 @@ void VoodooPS2TouchPadBase::setParamPropertiesGated(OSDictionary * config)
         {"MomentumScrollTimer",             &momentumscrolltimer},
         {"ClickPadClickTime",               &clickpadclicktime},
         {"MiddleClickTime",                 &_maxmiddleclicktime},
-        {"DragExitDelayTime",               &dragexitdelay},
-        {"ScrollExitDelayTime",             &scrollexitdelay},
     };
     
     int oldmousecount = mousecount;
@@ -834,9 +592,6 @@ void VoodooPS2TouchPadBase::setParamPropertiesGated(OSDictionary * config)
         bogusdxthresh = 0x7FFFFFFF;
     if (!bogusdythresh)
         bogusdythresh = 0x7FFFFFFF;
-
-//REVIEW: this should be done maybe only when necessary...
-    touchmode=MODE_NOTOUCH;
 
     // check for special terminating sequence from PS2Daemon
     if (-1 == mousecount)
