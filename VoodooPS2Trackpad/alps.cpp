@@ -139,8 +139,6 @@ static const struct alps_model_info alps_model_data[] = {
     /* Dell Latitude E5500, E6400, E6500, Precision M4400 */
     { { 0x62, 0x02, 0x14 }, 0x00, ALPS_PROTO_V2, 0xcf, 0xcf,
         ALPS_PASS | ALPS_DUALPOINT | ALPS_PS2_INTERLEAVED },
-    /* Dell Precision M4700 */
-    { { 0x73, 0x03, 0x0a }, 0x1d, ALPS_PROTO_V3_RUSHMORE, 0x00, 0x00, ALPS_DUALPOINT | ALPS_STICK_BITS },
     { { 0x73, 0x02, 0x50 }, 0x00, ALPS_PROTO_V2, 0xcf, 0xcf, ALPS_FOUR_BUTTONS },
     /* Dell Vostro 1400 */
     { { 0x52, 0x01, 0x14 }, 0x00, ALPS_PROTO_V2, 0xff, 0xff,
@@ -2412,7 +2410,7 @@ bool ALPS::alps_hw_init_ss4_v2()
     
 }
 
-bool ALPS::ps2_command(unsigned char value, UInt8 command)
+void ALPS::ps2_command(unsigned char value, UInt8 command)
 {
     TPS2Request<2> request;
     int cmdCount = 0;
@@ -2425,13 +2423,10 @@ bool ALPS::ps2_command(unsigned char value, UInt8 command)
     assert(request.commandsCount <= countof(request.commands));
     _device->submitRequestAndBlock(&request);
     
-    if (request.commandsCount != 2) {
-        return false;
-    }
     //return request.commandsCount = cmdCount;
 }
 
-bool ALPS::ps2_command_short(UInt8 command)
+void ALPS::ps2_command_short(UInt8 command)
 {
     TPS2Request<1> request;
     int cmdCount = 0;
@@ -2442,9 +2437,6 @@ bool ALPS::ps2_command_short(UInt8 command)
     assert(request.commandsCount <= countof(request.commands));
     _device->submitRequestAndBlock(&request);
     
-    if (request.commandsCount != 1) {
-        return false;
-    }
     //return request.commandsCount = cmdCount;
 }
 
