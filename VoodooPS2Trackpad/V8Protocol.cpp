@@ -8,9 +8,6 @@
 
 #include "V8Protocol.h"
 
-void V8Protocol::hwInit() {
-}
-
 unsigned char V8Protocol::alps_get_pkt_id_ss4_v2(UInt8 *byte) {
   unsigned char pkt_id = SS4_PACKET_ID_IDLE;
   
@@ -153,17 +150,16 @@ void V8Protocol::decodePacket(struct alps_fields *f, UInt8 *packet) {
   }
 }
 
-struct alps_fields V8Protocol::processPacket(UInt8 *packet)
+struct alps_fields* V8Protocol::processPacket(struct alps_fields *f, UInt8 *packet)
 {
   int buttons = 0;
-  struct alps_fields f;
   int x, y, pressure;
   
   uint64_t now_abs;
   clock_get_uptime(&now_abs);
   
   memset(&f, 0, sizeof(struct alps_fields));
-  decodePacket(&f, packet);
+  decodePacket(f, packet);
   if (priv->multi_packet) {
       /*
        * Sometimes the first packet will indicate a multi-packet
@@ -171,9 +167,9 @@ struct alps_fields V8Protocol::processPacket(UInt8 *packet)
        * come. Check for this, and when it happens process the
        * position packet as usual.
        */
-      if (f.is_mp) {
+      if (f->is_mp) {
           /* Now process the 1st packet */
-          decodePacket(&f, priv->multi_data);
+          decodePacket(f, priv->multi_data);
       } else {
           priv->multi_packet = 0;
       }
@@ -183,12 +179,12 @@ struct alps_fields V8Protocol::processPacket(UInt8 *packet)
    * "f.is_mp" would always be '0' after merging the 1st and 2nd packet.
    * When it is set, it means 2nd packet comes without 1st packet come.
    */
-  if (f.is_mp) {
+  if (f->is_mp) {
       return f;
   }
   
   /* Save the first packet */
-  if (!priv->multi_packet && f.first_mp) {
+  if (!priv->multi_packet && f->first_mp) {
       priv->multi_packet = 1;
       memcpy(priv->multi_data, packet, sizeof(priv->multi_data));
       return f;
@@ -206,9 +202,9 @@ struct alps_fields V8Protocol::processPacket(UInt8 *packet)
       y = (((packet[3] & 1) << 7) | (packet[2] & 0x7f));
       pressure = (packet[4] & 0x7f);
       
-      buttons |= f.ts_left ? 0x01 : 0;
-      buttons |= f.ts_right ? 0x02 : 0;
-      buttons |= f.ts_middle ? 0x04 : 0;
+      buttons |= f->ts_left ? 0x01 : 0;
+      buttons |= f->ts_right ? 0x02 : 0;
+      buttons |= f->ts_middle ? 0x04 : 0;
       
       if ((abs(x) >= 0x7f) || (abs(y) >= 0x7f)) {
           return f;
@@ -221,13 +217,13 @@ struct alps_fields V8Protocol::processPacket(UInt8 *packet)
   }
   
   /* Report touchpad */
-  buttons |= f.left ? 0x01 : 0;
-  buttons |= f.right ? 0x02 : 0;
-  buttons |= f.middle ? 0x04 : 0;
+  buttons |= f->left ? 0x01 : 0;
+  buttons |= f->right ? 0x02 : 0;
+  buttons |= f->middle ? 0x04 : 0;
   
   /* Reverse y co-ordinates to have 0 at bottom for gestures to work */
-  f.mt[0].y = priv->y_max - f.mt[0].y;
-  f.mt[1].y = priv->y_max - f.mt[1].y;
+  f->mt[0].y = priv->y_max - f->mt[0].y;
+  f->mt[1].y = priv->y_max - f->mt[1].y;
   
   return f;
 }

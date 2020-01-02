@@ -11,6 +11,49 @@
 #include <IOKit/IOCommandGate.h>
 #include "Decay.h"
 #include "../VoodooInput/VoodooInput/VoodooInputMultitouch/VoodooInputEvent.h"
+#include "VoodooPS2AlpsTrackpadKonstants.h"
+
+/**
+ * struct alps_model_info - touchpad ID table
+ * @signature: E7 response string to match.
+ * @command_mode_resp: For V3/V4 touchpads, the final byte of the EC response
+ *   (aka command mode response) identifies the firmware minor version.  This
+ *   can be used to distinguish different hardware models which are not
+ *   uniquely identifiable through their E7 responses.
+ * @proto_version: Indicates V1/V2/V3/...
+ * @byte0: Helps figure out whether a position report packet matches the
+ *   known format for this model.  The first byte of the report, ANDed with
+ *   mask0, should match byte0.
+ * @mask0: The mask used to check the first byte of the report.
+ * @flags: Additional device capabilities (passthrough port, trackstick, etc.).
+ *
+ * Many (but not all) ALPS touchpads can be identified by looking at the
+ * values returned in the "E7 report" and/or the "EC report."  This table
+ * lists a number of such touchpads.
+ */
+struct alps_model_info {
+    UInt8 signature[3];
+    UInt8 command_mode_resp;
+    UInt16 proto_version;
+    UInt8 byte0, mask0;
+    unsigned int flags;
+};
+
+/**
+ * struct alps_nibble_commands - encodings for register accesses
+ * @command: PS/2 command used for the nibble
+ * @data: Data supplied as an argument to the PS/2 command, if applicable
+ *
+ * The ALPS protocol uses magic sequences to transmit binary data to the
+ * touchpad, as it is generally not OK to send arbitrary bytes out the
+ * PS/2 port.  Each of the sequences in this table sends one nibble of the
+ * register address or (write) data.  Different versions of the ALPS protocol
+ * use slightly different encodings.
+ */
+struct alps_nibble_commands {
+    SInt32 command;
+    UInt8 data;
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // VoodooPS2TouchPadBase Class Declaration
@@ -18,12 +61,17 @@
 
 #define kPacketLength 6
 
+typedef struct ALPSStatus {
+    UInt8 bytes[3];
+} ALPSStatus_t;
+
 class EXPORT VoodooPS2TouchPadBase : public IOHIPointing
 {
     typedef IOHIPointing super;
     OSDeclareAbstractStructors(VoodooPS2TouchPadBase);
 
 protected:
+    alps_data priv;
     ApplePS2MouseDevice * _device;
     bool                _interruptHandlerInstalled;
     bool                _powerControlHandlerInstalled;
@@ -208,6 +256,11 @@ protected:
         { timer->setTimeout(*(AbsoluteTime*)&time); }
     inline void cancelTimer(IOTimerEventSource* timer)
         { timer->cancelTimeout(); }
+    
+    // From Linux
+    bool rpt_cmd(SInt32 init_command, SInt32 init_arg, SInt32 repeated_command, ALPSStatus_t *report);
+    bool matchTable(ALPSStatus_t *e7, ALPSStatus_t *ec);
+    IOReturn identify(UInt16 modelToLookFor);
 
 public:
     virtual bool init( OSDictionary * properties );

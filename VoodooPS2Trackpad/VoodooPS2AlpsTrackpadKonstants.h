@@ -10,11 +10,7 @@
 #define VoodooPS2AlpsTrackpadKonstants_h
 
 #include <IOKit/hidsystem/IOHIPointing.h>
-
-enum {
-  V1, V2, V3, V3Rushmore,
-  V4, V5, V6, V7, V8
-} Version;
+#include <IOKit/IOCommandGate.h>
 
 #define ALPS_PROTO_V1  0x100
 #define ALPS_PROTO_V2  0x200
@@ -46,16 +42,21 @@ enum {
 #define ALPS_BUTTONPAD        0x200  /* device is a clickpad */
 #define ALPS_DUALPOINT_WITH_PRESSURE  0x400  /* device can report trackpoint pressure */
 
-#define ARRAY_SIZE(x)    (sizeof(x)/sizeof(x[0]))
-#define MAX(X,Y)         ((X) > (Y) ? (X) : (Y))
-#define abs(x) ((x) < 0 ? -(x) : (x))
-#define BIT(x) (1 << (x))
-
 #define kPacketLengthSmall  3
 #define kPacketLengthLarge  6
 #define kPacketLengthMax    6
 #define kDP_CommandNibble10 0xf2
 #define BITS_PER_BYTE 8
+
+#define ALPS_CMD_NIBBLE_10  0x01f2
+
+#define ALPS_QUIRK_TRACKSTICK_BUTTONS  1 /* trakcstick buttons in trackstick packet */
+
+#define ARRAY_SIZE(x)    (sizeof(x)/sizeof(x[0]))
+#define MAX(X,Y)         ((X) > (Y) ? (X) : (Y))
+#define abs(x) ((x) < 0 ? -(x) : (x))
+#define BIT(x) (1 << (x))
+
 
 struct alps_bitmap_point {
     int start_bit;
@@ -154,10 +155,18 @@ struct alps_data {
 };
 
 class Protocol {
+    // struct alps_fields f;
+    // memset(&f, 0, sizeof(f));
 protected:
-  struct alps_data *priv;
-  Protocol (struct alps_data *priv) { this->priv = priv; };
-  virtual struct alps_fields processPacket(struct alps_field *f, UInt8 *packet);
+    
+    UInt32 lastButtons;
+    struct alps_data *priv;
+    Protocol (struct alps_data *priv) { this->priv = priv; };
+    int process_bitmap(struct alps_data *priv,
+                       struct alps_fields *fields);
+    virtual struct alps_fields processPacket(struct alps_field *f, UInt8 *packet);
+  
+
 };
 
 #endif /* VoodooPS2AlpsTrackpadKonstants_h */

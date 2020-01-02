@@ -7,7 +7,7 @@
 #include <IOKit/IOWorkLoop.h>
 #include <IOKit/IOTimerEventSource.h>
 #include "VoodooPS2Controller.h"
-#include "VoodooPS2AlpsTrackpadBase.h"
+#include "VoodooPS2TrackpadBase.h"
 
 // =============================================================================
 // VoodooPS2TouchPadBase Class Implementation
@@ -27,6 +27,190 @@ IOFixed     VoodooPS2TouchPadBase::resolution()  { return _resolution << 16; };
 #define abs(x) ((x) < 0 ? -(x) : (x))
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+/* ===============================||\\alps.c from linux 4.4//||================================== */
+
+bool VoodooPS2TouchPadBase::rpt_cmd(SInt32 init_command, SInt32 init_arg, SInt32 repeated_command, ALPSStatus_t *report)
+{
+    TPS2Request<9> request;
+    int byte0, cmd;
+    cmd = byte0 = 0;
+    
+    if (init_command) {
+        request.commands[cmd].command = kPS2C_SendMouseCommandAndCompareAck;
+        request.commands[cmd++].inOrOut = kDP_SetMouseResolution;
+        request.commands[cmd].command = kPS2C_SendMouseCommandAndCompareAck;
+        request.commands[cmd++].inOrOut = init_arg;
+    }
+    
+    
+    // 3X run command
+    request.commands[cmd].command = kPS2C_SendMouseCommandAndCompareAck;
+    request.commands[cmd++].inOrOut = repeated_command;
+    request.commands[cmd].command = kPS2C_SendMouseCommandAndCompareAck;
+    request.commands[cmd++].inOrOut = repeated_command;
+    request.commands[cmd].command = kPS2C_SendMouseCommandAndCompareAck;
+    request.commands[cmd++].inOrOut = repeated_command;
+    
+    // Get info/result
+    request.commands[cmd].command = kPS2C_SendMouseCommandAndCompareAck;
+    request.commands[cmd++].inOrOut = kDP_GetMouseInformation;
+    byte0 = cmd;
+    request.commands[cmd].command = kPS2C_ReadDataPort;
+    request.commands[cmd++].inOrOut = 0;
+    request.commands[cmd].command = kPS2C_ReadDataPort;
+    request.commands[cmd++].inOrOut = 0;
+    request.commands[cmd].command = kPS2C_ReadDataPort;
+    request.commands[cmd++].inOrOut = 0;
+    request.commandsCount = cmd;
+    assert(request.commandsCount <= countof(request.commands));
+    _device->submitRequestAndBlock(&request);
+    
+    report->bytes[0] = request.commands[byte0].inOrOut;
+    report->bytes[1] = request.commands[byte0+1].inOrOut;
+    report->bytes[2] = request.commands[byte0+2].inOrOut;
+    
+    DEBUG_LOG("%02x report: [0x%02x 0x%02x 0x%02x]\n",
+              repeated_command,
+              report->bytes[0],
+              report->bytes[1],
+              report->bytes[2]);
+    
+    return request.commandsCount == cmd;
+}
+
+bool VoodooPS2TouchPadBase::matchTable(ALPSStatus_t *e7, ALPSStatus_t *ec) {
+    const struct alps_model_info *model;
+    int i;
+  
+    IOLog("ALPS: Touchpad with Signature { %d, %d, %d }", e7->bytes[0], e7->bytes[1], e7->bytes[2]);
+  
+    for (i = 0; i < ARRAY_SIZE(alps_model_data); i++) {
+        model = &alps_model_data[i];
+        
+        if (!memcmp(e7->bytes, model->signature, sizeof(model->signature)) &&
+            (!model->command_mode_resp ||
+             model->command_mode_resp == ec->bytes[2])) {
+                
+                priv.proto_version = model->proto_version;
+                
+                // log model version:
+                if (priv.proto_version == ALPS_PROTO_V1) {
+                    IOLog("ALPS: Found an ALPS V1 TouchPad\n");
+                } else if (priv.proto_version == ALPS_PROTO_V2) {
+                    IOLog("ALPS: Found an ALPS V2 TouchPad\n");
+                } else if (priv.proto_version == ALPS_PROTO_V3_RUSHMORE) {
+                    IOLog("ALPS: Found an ALPS V3 Rushmore TouchPad\n!");
+                } else if (priv.proto_version == ALPS_PROTO_V4) {
+                    IOLog("ALPS: Found an ALPS V4 TouchPad\n");
+                } else if (priv.proto_version == ALPS_PROTO_V6) {
+                    IOLog("ALPS: Found an ALPS V6 TouchPad\n");
+                }
+                
+                set_protocol();
+                
+                priv.flags = model->flags;
+                priv.byte0 = model->byte0;
+                priv.mask0 = model->mask0;
+                
+                return true;
+            }
+    }
+    
+    return false;
+}
+
+IOReturn VoodooPS2TouchPadBase::identify(UInt16 modelToLookFor) {
+    ALPSStatus_t e6, e7, ec;
+    
+    /*
+     * First try "E6 report".
+     * ALPS should return 0,0,10 or 0,0,100 if no buttons are pressed.
+     * The bits 0-2 of the first byte will be 1s if some buttons are
+     * pressed.
+     */
+    
+    if (!rpt_cmd(kDP_SetMouseResolution, NULL, kDP_SetMouseScaling1To1, &e6)) {
+        IOLog("ALPS: identify: not an ALPS device. Error getting E6 report\n");
+        //return kIOReturnIOError;
+    }
+    
+    if ((e6.bytes[0] & 0xf8) != 0 || e6.bytes[1] != 0 || (e6.bytes[2] != 10 && e6.bytes[2] != 100)) {
+        IOLog("ALPS: identify: not an ALPS device. Invalid E6 report\n");
+        //return kIOReturnInvalid;
+    }
+    
+    /*
+     * Now get the "E7" and "EC" reports.  These will uniquely identify
+     * most ALPS touchpads.
+     */
+    if (!(rpt_cmd(kDP_SetMouseResolution, NULL, kDP_SetMouseScaling2To1, &e7) &&
+          rpt_cmd(kDP_SetMouseResolution, NULL, kDP_MouseResetWrap, &ec) &&
+          exit_command_mode())) {
+        IOLog("ALPS: identify: not an ALPS device. Error getting E7/EC report\n");
+        return kIOReturnIOError;
+    }
+    
+    if (matchTable(&e7, &ec)) {
+        if(priv.proto_version != modelToLookFor)
+            return kIOReturnInvalid;
+        else
+            return 0;
+    } // ELSE
+    
+    switch(modelToLookFor) {
+        // V3, V3-Rushmore, and V5 are basically the same
+        case ALPS_PROTO_V3:
+            if (ec.bytes[0] == 0x88 && ec.bytes[1] == 0x08) {
+                
+                priv.proto_version = ALPS_PROTO_V3_RUSHMORE;
+                IOLog("ALPS: Found a V3 Rushmore TouchPad with ID: E7=0x%02x 0x%02x 0x%02x, EC=0x%02x 0x%02x 0x%02x\n", e7.bytes[0], e7.bytes[1], e7.bytes[2], ec.bytes[0], ec.bytes[1], ec.bytes[2]);
+                
+            } else if (e7.bytes[0] == 0x73 && e7.bytes[1] == 0x03 && e7.bytes[2] == 0x50 &&
+                ec.bytes[0] == 0x73 && (ec.bytes[1] == 0x01 || ec.bytes[1] == 0x02)) {
+                
+                priv.proto_version = ALPS_PROTO_V5;
+                IOLog("ALPS: Found a V5 Dolphin TouchPad with ID: E7=0x%02x 0x%02x 0x%02x, EC=0x%02x 0x%02x 0x%02x\n", e7.bytes[0], e7.bytes[1], e7.bytes[2], ec.bytes[0], ec.bytes[1], ec.bytes[2]);
+            } else if (ec.bytes[0] == 0x88 && ec.bytes[1] == 0x07 &&
+                ec.bytes[2] >= 0x90 && ec.bytes[2] <= 0x9d) {
+                
+                priv.proto_version = ALPS_PROTO_V3;
+                IOLog("ALPS: Found a V3 Pinnacle TouchPad with ID: E7=0x%02x 0x%02x 0x%02x, EC=0x%02x 0x%02x 0x%02x\n", e7.bytes[0], e7.bytes[1], e7.bytes[2], ec.bytes[0], ec.bytes[1], ec.bytes[2]);
+                
+            } else return kIOReturnInvalid;
+            break;
+        case ALPS_PROTO_V7:
+            if (ec.bytes[0] == 0x88 &&
+                ((ec.bytes[1] & 0xf0) == 0xb0 || (ec.bytes[1] & 0xf0) == 0xc0)) {
+            
+                priv.proto_version = ALPS_PROTO_V7;
+                    IOLog("ALPS: Found a V7 TouchPad with ID: E7=0x%02x 0x%02x 0x%02x, EC=0x%02x 0x%02x 0x%02x\n", e7.bytes[0], e7.bytes[1], e7.bytes[2], ec.bytes[0], ec.bytes[1], ec.bytes[2]);
+            } else return kIOReturnInvalid;
+            break;
+        case ALPS_PROTO_V8:
+            if (e7.bytes[0] == 0x73 && e7.bytes[1] == 0x03 &&
+                e7.bytes[2] == 0x14 && ec.bytes[1] == 0x02) {
+                
+                priv.proto_version = ALPS_PROTO_V8;
+                IOLog("ALPS: Found a V8 TouchPad with ID: E7=0x%02x 0x%02x 0x%02x, EC=0x%02x 0x%02x 0x%02x\n", e7.bytes[0], e7.bytes[1], e7.bytes[2], ec.bytes[0], ec.bytes[1], ec.bytes[2]);
+            } else if (e7.bytes[0] == 0x73 && e7.bytes[1] == 0x03 &&
+                       e7.bytes[2] == 0x28 && ec.bytes[1] == 0x01) {
+                priv.proto_version = ALPS_PROTO_V8;
+                IOLog("ALPS: Found a V8 Flare TouchPad with ID: E7=0x%02x 0x%02x 0x%02x, EC=0x%02x 0x%02x 0x%02x\n", e7.bytes[0], e7.bytes[1], e7.bytes[2], ec.bytes[0], ec.bytes[1], ec.bytes[2]);
+                
+                
+            } else return kIOReturnInvalid;
+            break;
+        default:
+            return kIOReturnInvalid;
+    }
+    
+    /* Save the Firmware version */
+    memcpy(priv.fw_ver, ec.bytes, 3);
+    set_protocol();
+    return 0;
+}
+
 
 bool VoodooPS2TouchPadBase::init(OSDictionary * dict)
 {
@@ -64,6 +248,8 @@ bool VoodooPS2TouchPadBase::init(OSDictionary * dict)
     _packetByteCount = 0;
     _lastdata = 0;
     _cmdGate = 0;
+        
+    memset(&inputEvent, 0, sizeof(VoodooInputEvent));
     
 	IOLog("VoodooPS2TouchPad Base Driver loaded...\n");
     
@@ -91,10 +277,7 @@ bool VoodooPS2TouchPadBase::start( IOService * provider )
     if (!super::start(provider))
         return false;
 
-    //
     // Maintain a pointer to and retain the provider object.
-    //
-
     _device = (ApplePS2MouseDevice *) provider;
     _device->retain();
     
@@ -112,9 +295,7 @@ bool VoodooPS2TouchPadBase::start( IOService * provider )
     setProperty("HIDScrollResolutionX", _scrollresolution << 16, 32);
     setProperty("HIDScrollResolutionY", _scrollresolution << 16, 32);
     
-    //
     // Setup workloop with command gate for thread synchronization...
-    //
     IOWorkLoop* pWorkLoop = getWorkLoop();
     _cmdGate = IOCommandGate::commandGate(this);
     if (!pWorkLoop || !_cmdGate)
@@ -123,9 +304,7 @@ bool VoodooPS2TouchPadBase::start( IOService * provider )
         return false;
     }
     
-    //
     // Setup button timer event source
-    //
     if (_buttonCount >= 3)
     {
         if (!_buttonTimer)
@@ -136,16 +315,10 @@ bool VoodooPS2TouchPadBase::start( IOService * provider )
         pWorkLoop->addEventSource(_buttonTimer);
     }
     
-    //
     // Lock the controller during initialization
-    //
-    
     _device->lock();
 
-
-    //
     // Perform any implementation specific device initialization
-    //
     if (!deviceSpecificInit()) {
         _device->unlock();
         _device->release();
@@ -153,10 +326,7 @@ bool VoodooPS2TouchPadBase::start( IOService * provider )
         return false;
     }
 
-    //
     // Install our driver's interrupt handler, for asynchronous data delivery.
-    //
-    
     _device->installInterruptAction(this,
                                     OSMemberFunctionCast(PS2InterruptAction,this,&VoodooPS2TouchPadBase::interruptOccurred),
                                     OSMemberFunctionCast(PS2PacketAction, this, &VoodooPS2TouchPadBase::packetReady));
@@ -165,10 +335,7 @@ bool VoodooPS2TouchPadBase::start( IOService * provider )
     // now safe to allow other threads
     _device->unlock();
     
-    //
 	// Install our power control handler.
-	//
-    
 	_device->installPowerControlAction( this,
         OSMemberFunctionCast(PS2PowerControlAction, this, &VoodooPS2TouchPadBase::setDevicePowerState) );
 	_powerControlHandlerInstalled = true;
