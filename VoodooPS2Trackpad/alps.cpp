@@ -29,10 +29,105 @@ enum {
 /*
  * Definitions for ALPS version 3 and 4 command mode protocol
  */
+#define ALPS_CMD_NIBBLE_10  0x01f2
 
 #define ALPS_REG_BASE_RUSHMORE  0xc2c0
 #define ALPS_REG_BASE_V7	0xc2c0
 #define ALPS_REG_BASE_PINNACLE  0x0000
+
+static const struct alps_nibble_commands alps_v3_nibble_commands[] = {
+    { kDP_MouseSetPoll,                 0x00 }, /* 0 no send/recv */
+    { kDP_SetDefaults,                  0x00 }, /* 1 no send/recv */
+    { kDP_SetMouseScaling2To1,          0x00 }, /* 2 no send/recv */
+    { kDP_SetMouseSampleRate | 0x1000,  0x0a }, /* 3 send=1 recv=0 */
+    { kDP_SetMouseSampleRate | 0x1000,  0x14 }, /* 4 ..*/
+    { kDP_SetMouseSampleRate | 0x1000,  0x28 }, /* 5 ..*/
+    { kDP_SetMouseSampleRate | 0x1000,  0x3c }, /* 6 ..*/
+    { kDP_SetMouseSampleRate | 0x1000,  0x50 }, /* 7 ..*/
+    { kDP_SetMouseSampleRate | 0x1000,  0x64 }, /* 8 ..*/
+    { kDP_SetMouseSampleRate | 0x1000,  0xc8 }, /* 9 ..*/
+    { kDP_CommandNibble10    | 0x0100,  0x00 }, /* a send=0 recv=1 */
+    { kDP_SetMouseResolution | 0x1000,  0x00 }, /* b send=1 recv=0 */
+    { kDP_SetMouseResolution | 0x1000,  0x01 }, /* c ..*/
+    { kDP_SetMouseResolution | 0x1000,  0x02 }, /* d ..*/
+    { kDP_SetMouseResolution | 0x1000,  0x03 }, /* e ..*/
+    { kDP_SetMouseScaling1To1,          0x00 }, /* f no send/recv */
+};
+
+static const struct alps_nibble_commands alps_v4_nibble_commands[] = {
+    { kDP_Enable,                       0x00 }, /* 0 no send/recv */
+    { kDP_SetDefaults,                  0x00 }, /* 1 no send/recv */
+    { kDP_SetMouseScaling2To1,          0x00 }, /* 2 no send/recv */
+    { kDP_SetMouseSampleRate | 0x1000,  0x0a }, /* 3 send=1 recv=0 */
+    { kDP_SetMouseSampleRate | 0x1000,  0x14 }, /* 4 ..*/
+    { kDP_SetMouseSampleRate | 0x1000,  0x28 }, /* 5 ..*/
+    { kDP_SetMouseSampleRate | 0x1000,  0x3c }, /* 6 ..*/
+    { kDP_SetMouseSampleRate | 0x1000,  0x50 }, /* 7 ..*/
+    { kDP_SetMouseSampleRate | 0x1000,  0x64 }, /* 8 ..*/
+    { kDP_SetMouseSampleRate | 0x1000,  0xc8 }, /* 9 ..*/
+    { kDP_CommandNibble10    | 0x0100,  0x00 }, /* a send=0 recv=1 */
+    { kDP_SetMouseResolution | 0x1000,  0x00 }, /* b send=1 recv=0 */
+    { kDP_SetMouseResolution | 0x1000,  0x01 }, /* c ..*/
+    { kDP_SetMouseResolution | 0x1000,  0x02 }, /* d ..*/
+    { kDP_SetMouseResolution | 0x1000,  0x03 }, /* e ..*/
+    { kDP_SetMouseScaling1To1,          0x00 }, /* f no send/recv */
+};
+
+static const struct alps_nibble_commands alps_v6_nibble_commands[] = {
+    { kDP_Enable,		            0x00 }, /* 0 */
+    { kDP_SetMouseSampleRate,		0x0a }, /* 1 */
+    { kDP_SetMouseSampleRate,		0x14 }, /* 2 */
+    { kDP_SetMouseSampleRate,		0x28 }, /* 3 */
+    { kDP_SetMouseSampleRate,		0x3c }, /* 4 */
+    { kDP_SetMouseSampleRate,		0x50 }, /* 5 */
+    { kDP_SetMouseSampleRate,		0x64 }, /* 6 */
+    { kDP_SetMouseSampleRate,		0xc8 }, /* 7 */
+    { kDP_GetId,		            0x00 }, /* 8 */
+    { kDP_GetMouseInformation,		0x00 }, /* 9 */
+    { kDP_SetMouseResolution,		0x00 }, /* a */
+    { kDP_SetMouseResolution,		0x01 }, /* b */
+    { kDP_SetMouseResolution,		0x02 }, /* c */
+    { kDP_SetMouseResolution,		0x03 }, /* d */
+    { kDP_SetMouseScaling2To1,	    0x00 }, /* e */
+    { kDP_SetMouseScaling1To1,	    0x00 }, /* f */
+};
+
+
+
+
+static const struct alps_model_info alps_model_data[] = {
+    { { 0x32, 0x02, 0x14 }, 0x00, ALPS_PROTO_V2, 0xf8, 0xf8, ALPS_PASS | ALPS_DUALPOINT },
+    /* Toshiba Salellite Pro M10 */
+    { { 0x33, 0x02, 0x0a }, 0x00, ALPS_PROTO_V1, 0x88, 0xf8, 0 },               /* UMAX-530T */
+    { { 0x53, 0x02, 0x0a }, 0x00, ALPS_PROTO_V2, 0xf8, 0xf8, 0 },
+    { { 0x53, 0x02, 0x14 }, 0x00, ALPS_PROTO_V2, 0xf8, 0xf8, 0 },
+    { { 0x60, 0x03, 0xc8 }, 0x00, ALPS_PROTO_V2, 0xf8, 0xf8, 0 },               /* HP ze1115 */
+    { { 0x63, 0x02, 0x0a }, 0x00, ALPS_PROTO_V2, 0xf8, 0xf8, 0 },
+    { { 0x63, 0x02, 0x14 }, 0x00, ALPS_PROTO_V2, 0xf8, 0xf8, 0 },
+    { { 0x63, 0x02, 0x28 }, 0x00, ALPS_PROTO_V2, 0xf8, 0xf8, ALPS_FW_BK_2 },    /* Fujitsu Siemens S6010 */
+    { { 0x63, 0x02, 0x3c }, 0x00, ALPS_PROTO_V2, 0x8f, 0x8f, ALPS_WHEEL },      /* Toshiba Satellite S2400-103 */
+    { { 0x63, 0x02, 0x50 }, 0x00, ALPS_PROTO_V2, 0xef, 0xef, ALPS_FW_BK_1 },    /* NEC Versa L320 */
+    { { 0x63, 0x02, 0x64 }, 0x00, ALPS_PROTO_V2, 0xf8, 0xf8, 0 },
+    { { 0x63, 0x03, 0xc8 }, 0x00, ALPS_PROTO_V2, 0xf8, 0xf8, ALPS_PASS | ALPS_DUALPOINT },
+    /* Dell Latitude D800 */
+    { { 0x73, 0x00, 0x0a }, 0x00, ALPS_PROTO_V2, 0xf8, 0xf8, ALPS_DUALPOINT },  /* ThinkPad R61 8918-5QG */
+    { { 0x73, 0x02, 0x0a }, 0x00, ALPS_PROTO_V2, 0xf8, 0xf8, 0 },
+    { { 0x73, 0x02, 0x14 }, 0x00, ALPS_PROTO_V2, 0xf8, 0xf8, ALPS_FW_BK_2 },    /* Ahtec Laptop */
+    { { 0x20, 0x02, 0x0e }, 0x00, ALPS_PROTO_V2, 0xf8, 0xf8, ALPS_PASS | ALPS_DUALPOINT },
+    /* XXX */
+    { { 0x22, 0x02, 0x0a }, 0x00, ALPS_PROTO_V2, 0xf8, 0xf8, ALPS_PASS | ALPS_DUALPOINT },
+    { { 0x22, 0x02, 0x14 }, 0x00, ALPS_PROTO_V2, 0xff, 0xff, ALPS_PASS | ALPS_DUALPOINT },
+    /* Dell Latitude D600 */
+    /* Dell Latitude E5500, E6400, E6500, Precision M4400 */
+    { { 0x62, 0x02, 0x14 }, 0x00, ALPS_PROTO_V2, 0xcf, 0xcf,
+        ALPS_PASS | ALPS_DUALPOINT | ALPS_PS2_INTERLEAVED },
+    { { 0x73, 0x02, 0x50 }, 0x00, ALPS_PROTO_V2, 0xcf, 0xcf, ALPS_FOUR_BUTTONS },
+    /* Dell Vostro 1400 */
+    { { 0x52, 0x01, 0x14 }, 0x00, ALPS_PROTO_V2, 0xff, 0xff,
+        ALPS_PASS | ALPS_DUALPOINT | ALPS_PS2_INTERLEAVED },
+    /* Toshiba Tecra A11-11L */
+    { { 0x73, 0x02, 0x64 }, 0x8a, ALPS_PROTO_V4, 0x8f, 0x8f, 0 },
+};
 
 // =============================================================================
 // ALPS Class Implementation  //////////////////////////////////////////////////
@@ -125,7 +220,7 @@ bool ALPS::init(OSDictionary *dict) {
     momentumscroll=true;
     outzone_wt=palm=palm_wt=true;
     
-
+    memset(&inputEvent, 0, sizeof(VoodooInputEvent));
     
     return true;
 }
@@ -163,6 +258,9 @@ bool ALPS::resetMouse() {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+/* ============================================================================================== */
+/* ===============================||\\alps.c from linux 4.4//||================================== */
+/* ============================================================================================== */
 
 void ALPS::alps_process_packet_v1_v2(UInt8 *packet) {
     int x, y, z, ges, fin, left, right, middle, buttons = 0, fingers = 0;
@@ -257,6 +355,437 @@ void ALPS::alps_process_packet_v1_v2(UInt8 *packet) {
             dispatchScrollWheelEventX(scrollAmount, 0, 0, now_abs);
         }
     }
+}
+
+static void alps_get_bitmap_points(unsigned int map,
+                                   struct alps_bitmap_point *low,
+                                   struct alps_bitmap_point *high,
+                                   int *fingers)
+{
+    struct alps_bitmap_point *point;
+    int i, bit, prev_bit = 0;
+    
+    point = low;
+    for (i = 0; map != 0; i++, map >>= 1) {
+        bit = map & 1;
+        if (bit) {
+            if (!prev_bit) {
+                point->start_bit = i;
+                point->num_bits = 0;
+                (*fingers)++;
+            }
+            point->num_bits++;
+        } else {
+            if (prev_bit)
+                point = high;
+        }
+        prev_bit = bit;
+    }
+}
+
+/*
+ * Process bitmap data from semi-mt protocols. Returns the number of
+ * fingers detected. A return value of 0 means at least one of the
+ * bitmaps was empty.
+ *
+ * The bitmaps don't have enough data to track fingers, so this function
+ * only generates points representing a bounding box of all contacts.
+ * These points are returned in fields->mt when the return value
+ * is greater than 0.
+ */
+int ALPS::alps_process_bitmap(struct alps_data *priv,
+                              struct alps_fields *fields)
+{
+    
+    int i, fingers_x = 0, fingers_y = 0, fingers, closest;
+    struct alps_bitmap_point x_low = {0,}, x_high = {0,};
+    struct alps_bitmap_point y_low = {0,}, y_high = {0,};
+    struct input_mt_pos corner[4];
+    
+    
+    if (!fields->x_map || !fields->y_map) {
+        return 0;
+    }
+    
+    alps_get_bitmap_points(fields->x_map, &x_low, &x_high, &fingers_x);
+    alps_get_bitmap_points(fields->y_map, &y_low, &y_high, &fingers_y);
+    
+    /*
+     * Fingers can overlap, so we use the maximum count of fingers
+     * on either axis as the finger count.
+     */
+    fingers = max(fingers_x, fingers_y);
+    
+    /*
+     * If an axis reports only a single contact, we have overlapping or
+     * adjacent fingers. Divide the single contact between the two points.
+     */
+    if (fingers_x == 1) {
+        i = x_low.num_bits / 2;
+        x_low.num_bits = x_low.num_bits - i;
+        x_high.start_bit = x_low.start_bit + i;
+        x_high.num_bits = max(i, 1);
+    }
+    
+    if (fingers_y == 1) {
+        i = y_low.num_bits / 2;
+        y_low.num_bits = y_low.num_bits - i;
+        y_high.start_bit = y_low.start_bit + i;
+        y_high.num_bits = max(i, 1);
+    }
+    
+    /* top-left corner */
+    corner[0].x = (priv->x_max * (2 * x_low.start_bit + x_low.num_bits - 1)) /
+    (2 * (priv->x_bits - 1));
+    corner[0].y = (priv->y_max * (2 * y_low.start_bit + y_low.num_bits - 1)) /
+    (2 * (priv->y_bits - 1));
+    
+    /* top-right corner */
+    corner[1].x = (priv->x_max * (2 * x_high.start_bit + x_high.num_bits - 1)) /
+    (2 * (priv->x_bits - 1));
+    corner[1].y = (priv->y_max * (2 * y_low.start_bit + y_low.num_bits - 1)) /
+    (2 * (priv->y_bits - 1));
+    
+    /* bottom-right corner */
+    corner[2].x = (priv->x_max * (2 * x_high.start_bit + x_high.num_bits - 1)) /
+    (2 * (priv->x_bits - 1));
+    corner[2].y = (priv->y_max * (2 * y_high.start_bit + y_high.num_bits - 1)) /
+    (2 * (priv->y_bits - 1));
+    
+    /* bottom-left corner */
+    corner[3].x = (priv->x_max * (2 * x_low.start_bit + x_low.num_bits - 1)) /
+    (2 * (priv->x_bits - 1));
+    corner[3].y = (priv->y_max * (2 * y_high.start_bit + y_high.num_bits - 1)) /
+    (2 * (priv->y_bits - 1));
+    
+    /* x-bitmap order is reversed on v5 touchpads  */
+    if (priv->proto_version == ALPS_PROTO_V5) {
+        for (i = 0; i < 4; i++)
+            corner[i].x = priv->x_max - corner[i].x;
+    }
+    
+    /* y-bitmap order is reversed on v3 and v4 touchpads  */
+    if (priv->proto_version == ALPS_PROTO_V3 || priv->proto_version == ALPS_PROTO_V4) {
+        for (i = 0; i < 4; i++)
+            corner[i].y = priv->y_max - corner[i].y;
+    }
+    
+    /*
+     * We only select a corner for the second touch once per 2 finger
+     * touch sequence to avoid the chosen corner (and thus the coordinates)
+     * jumping around when the first touch is in the middle.
+     */
+    if (priv->second_touch == -1) {
+        /* Find corner closest to our st coordinates */
+        closest = 0x7fffffff;
+        for (i = 0; i < 4; i++) {
+            int dx = fields->st.x - corner[i].x;
+            int dy = fields->st.y - corner[i].y;
+            int distance = dx * dx + dy * dy;
+            
+            if (distance < closest) {
+                priv->second_touch = i;
+                closest = distance;
+            }
+        }
+        /* And select the opposite corner to use for the 2nd touch */
+        priv->second_touch = (priv->second_touch + 2) % 4;
+    }
+    
+    fields->mt[0] = fields->st;
+    fields->mt[1] = corner[priv->second_touch];
+    
+    //IOLog("ALPS: Process Bitmap, Corner=%d, Fingers=%d, x1=%d, x2=%d, y1=%d, y2=%d\n", priv->second_touch, fingers, fields->mt[0].x, fields->mt[1].x, fields->mt[0].y, fields->mt[1].y);
+    return fingers;
+}
+
+void ALPS::alps_process_trackstick_packet_v3(UInt8 *packet) {
+    int x, y, z, left, right, middle;
+    uint64_t now_abs;
+    UInt32 buttons = 0, raw_buttons = 0;
+    
+    /* It should be a DualPoint when received trackstick packet */
+    if (!(priv.flags & ALPS_DUALPOINT)) {
+        return;
+    }
+    
+    /* Sanity check packet */
+    if (!(packet[0] & 0x40)) {
+        DEBUG_LOG("ps2: bad trackstick packet, disregarding...\n");
+        return;
+    }
+    
+    /* There is a special packet that seems to indicate the end
+     * of a stream of trackstick data. Filter these out
+     */
+    if (packet[1] == 0x7f && packet[2] == 0x7f && packet[3] == 0x7f) {
+        return;
+    }
+    
+    x = (SInt8) (((packet[0] & 0x20) << 2) | (packet[1] & 0x7f));
+    y = (SInt8) (((packet[0] & 0x10) << 3) | (packet[2] & 0x7f));
+    z = (packet[4] & 0x7c) >> 2;
+    
+    /* Prevent pointer jump on finger lift */
+    if ((abs(x) >= 0x7f) && (abs(y) >= 0x7f)) {
+        x = y = 0;
+    }
+    
+    /*
+     * The x and y values tend to be quite large, and when used
+     * alone the trackstick is difficult to use. Scale them down
+     * to compensate.
+     */
+    x /= 3;
+    y /= 3;
+    
+    /* To get proper movement direction */
+    y = -y;
+    
+    clock_get_uptime(&now_abs);
+    
+    /*
+     * Most ALPS models report the trackstick buttons in the touchpad
+     * packets, but a few report them here. No reliable way has been
+     * found to differentiate between the models upfront, so we enable
+     * the quirk in response to seeing a button press in the trackstick
+     * packet.
+     */
+    left = packet[3] & 0x01;
+    right = packet[3] & 0x02;
+    middle = packet[3] & 0x04;
+    
+    if (!(priv.quirks & ALPS_QUIRK_TRACKSTICK_BUTTONS) &&
+        (left || middle || right)) {
+        priv.quirks |= ALPS_QUIRK_TRACKSTICK_BUTTONS;
+    }
+    
+    if (priv.quirks & ALPS_QUIRK_TRACKSTICK_BUTTONS) {
+        raw_buttons |= left ? 0x01 : 0;
+        raw_buttons |= right ? 0x02 : 0;
+        raw_buttons |= middle ? 0x04 : 0;
+    }
+    
+    /* Button status can appear in normal packet */
+    if (0 == raw_buttons) {
+        buttons = lastbuttons;
+    } else {
+        buttons = raw_buttons;
+        lastbuttons = buttons;
+    }
+    
+    /* If middle button is pressed, switch to scroll mode. Else, move pointer normally */
+    if (0 == (buttons & 0x04)) {
+        dispatchRelativePointerEventX(x, y, buttons, now_abs);
+    } else {
+        dispatchScrollWheelEventX(-y, -x, 0, now_abs);
+    }
+}
+
+bool ALPS::alps_decode_buttons_v3(struct alps_fields *f, unsigned char *p) {
+    f->left = !!(p[3] & 0x01);
+    f->right = !!(p[3] & 0x02);
+    f->middle = !!(p[3] & 0x04);
+    
+    f->ts_left = !!(p[3] & 0x10);
+    f->ts_right = !!(p[3] & 0x20);
+    f->ts_middle = !!(p[3] & 0x40);
+    return true;
+}
+
+bool ALPS::alps_decode_pinnacle(struct alps_fields *f, UInt8 *p) {
+    f->first_mp = !!(p[4] & 0x40);
+    f->is_mp = !!(p[0] & 0x40);
+    
+    if (f->is_mp) {
+        f->fingers = (p[5] & 0x3) + 1;
+        f->x_map = ((p[4] & 0x7e) << 8) |
+        ((p[1] & 0x7f) << 2) |
+        ((p[0] & 0x30) >> 4);
+        f->y_map = ((p[3] & 0x70) << 4) |
+        ((p[2] & 0x7f) << 1) |
+        (p[4] & 0x01);
+    } else {
+        f->st.x = ((p[1] & 0x7f) << 4) | ((p[4] & 0x30) >> 2) |
+        ((p[0] & 0x30) >> 4);
+        f->st.y = ((p[2] & 0x7f) << 4) | (p[4] & 0x0f);
+        f->pressure = p[5] & 0x7f;
+        
+        alps_decode_buttons_v3(f, p);
+    }
+    return true;
+}
+
+bool ALPS::alps_decode_rushmore(struct alps_fields *f, UInt8 *p) {
+    f->first_mp = !!(p[4] & 0x40);
+    f->is_mp = !!(p[5] & 0x40);
+    
+    if (f->is_mp) {
+        f->fingers = max((p[5] & 0x3), ((p[5] >> 2) & 0x3)) + 1;
+        f->x_map = ((p[5] & 0x10) << 11) |
+        ((p[4] & 0x7e) << 8) |
+        ((p[1] & 0x7f) << 2) |
+        ((p[0] & 0x30) >> 4);
+        f->y_map = ((p[5] & 0x20) << 6) |
+        ((p[3] & 0x70) << 4) |
+        ((p[2] & 0x7f) << 1) |
+        (p[4] & 0x01);
+    } else {
+        f->st.x = ((p[1] & 0x7f) << 4) | ((p[4] & 0x30) >> 2) |
+        ((p[0] & 0x30) >> 4);
+        f->st.y = ((p[2] & 0x7f) << 4) | (p[4] & 0x0f);
+        f->pressure = p[5] & 0x7f;
+        
+        alps_decode_buttons_v3(f, p);
+    }
+    return true;
+}
+
+bool ALPS::alps_decode_dolphin(struct alps_fields *f, UInt8 *p) {
+    uint64_t palm_data = 0;
+    
+    f->first_mp = !!(p[0] & 0x02);
+    f->is_mp = !!(p[0] & 0x20);
+    
+    if (!f->is_mp) {
+        f->st.x = ((p[1] & 0x7f) | ((p[4] & 0x0f) << 7));
+        f->st.y = ((p[2] & 0x7f) | ((p[4] & 0xf0) << 3));
+        f->pressure = (p[0] & 4) ? 0 : p[5] & 0x7f;
+        alps_decode_buttons_v3(f, p);
+    } else {
+        f->fingers = ((p[0] & 0x6) >> 1 |
+                      (p[0] & 0x10) >> 2);
+        
+        palm_data = (p[1] & 0x7f) |
+        ((p[2] & 0x7f) << 7) |
+        ((p[4] & 0x7f) << 14) |
+        ((p[5] & 0x7f) << 21) |
+        ((p[3] & 0x07) << 28) |
+        (((uint64_t)p[3] & 0x70) << 27) |
+        (((uint64_t)p[0] & 0x01) << 34);
+        
+        /* Y-profile is stored in P(0) to p(n-1), n = y_bits; */
+        f->y_map = palm_data & (BIT(priv.y_bits) - 1);
+        
+        /* X-profile is stored in p(n) to p(n+m-1), m = x_bits; */
+        f->x_map = (palm_data >> priv.y_bits) &
+        (BIT(priv.x_bits) - 1);
+    }
+    return true;
+}
+
+void ALPS::alps_process_touchpad_packet_v3_v5(UInt8 *packet) {
+    //ffff
+    int fingers = 0, buttons = 0;
+    struct alps_fields f;
+    
+    memset(&f, 0, sizeof(f));
+    
+    (this->*decode_fields)(&f, packet);
+    /*
+     * There's no single feature of touchpad position and bitmap packets
+     * that can be used to distinguish between them. We rely on the fact
+     * that a bitmap packet should always follow a position packet with
+     * bit 6 of packet[4] set.
+     */
+    if (priv.multi_packet) {
+        /*
+         * Sometimes a position packet will indicate a multi-packet
+         * sequence, but then what follows is another position
+         * packet. Check for this, and when it happens process the
+         * position packet as usual.
+         */
+        if (f.is_mp) {
+            fingers = f.fingers;
+            /*
+             * Bitmap processing uses position packet's coordinate
+             * data, so we need to do decode it first.
+             */
+            (this->*decode_fields)(&f, priv.multi_data);
+            if (alps_process_bitmap(&priv, &f) == 0) {
+                fingers = 0; /* Use st data */
+            }
+        } else {
+            priv.multi_packet = 0;
+        }
+    }
+    
+    /*
+     * Bit 6 of byte 0 is not usually set in position packets. The only
+     * times it seems to be set is in situations where the data is
+     * suspect anyway, e.g. a palm resting flat on the touchpad. Given
+     * this combined with the fact that this bit is useful for filtering
+     * out misidentified bitmap packets, we reject anything with this
+     * bit set.
+     */
+    if (f.is_mp) {
+        return;
+    }
+    
+    if (!priv.multi_packet && (f.first_mp)) {
+        priv.multi_packet = 1;
+        memcpy(priv.multi_data, packet, sizeof(priv.multi_data));
+        return;
+    }
+    
+    priv.multi_packet = 0;
+    
+    /*
+     * Sometimes the hardware sends a single packet with z = 0
+     * in the middle of a stream. Real releases generate packets
+     * with x, y, and z all zero, so these seem to be flukes.
+     * Ignore them.
+     */
+    if (f.st.x && f.st.y && !f.pressure) {
+        //return; //Dr Hurt: This causes jitter
+    }
+    
+    /* Use st data when we don't have mt data */
+    if (fingers < 2) {
+        f.mt[0].x = f.st.x;
+        f.mt[0].y = f.st.y;
+        fingers = f.pressure > 0 ? 1 : 0;
+        priv.second_touch = -1;
+    }
+    
+    buttons |= f.left ? 0x01 : 0;
+    buttons |= f.right ? 0x02 : 0;
+    buttons |= f.middle ? 0x04 : 0;
+    
+    if ((priv.flags & ALPS_DUALPOINT) &&
+        !(priv.quirks & ALPS_QUIRK_TRACKSTICK_BUTTONS)) {
+        buttons |= f.ts_left ? 0x01 : 0;
+        buttons |= f.ts_right ? 0x02 : 0;
+        buttons |= f.ts_middle ? 0x04 : 0;
+    }
+    
+    /* Reverse y co-ordinates to have 0 at bottom for gestures to work */
+    f.mt[0].y = priv.y_max - f.mt[0].y;
+    f.mt[1].y = priv.y_max - f.mt[1].y;
+    
+    /* Ignore 1 finger events after 2 finger scroll to prevent jitter */
+    if (last_fingers == 2 && fingers == 1) {
+        //fingers = 2;
+    }
+    
+    dispatchEventsWithInfo(f.mt[0].x, f.mt[0].y, f.pressure, fingers, buttons);
+}
+
+void ALPS::alps_process_packet_v3(UInt8 *packet) {
+    /*
+     * v3 protocol packets come in three types, two representing
+     * touchpad data and one representing trackstick data.
+     * Trackstick packets seem to be distinguished by always
+     * having 0x3f in the last byte. This value has never been
+     * observed in the last byte of either of the other types
+     * of packets.
+     */
+    if (packet[5] == 0x3f) {
+        alps_process_trackstick_packet_v3(packet);
+        return;
+    }
+    
+    alps_process_touchpad_packet_v3_v5(packet);
 }
 
 void ALPS::alps_process_packet_v6(UInt8 *packet)
@@ -828,7 +1357,53 @@ bool ALPS::alps_command_mode_write_reg(UInt8 value) {
     return true;
 }
 
-
+bool ALPS::alps_rpt_cmd(SInt32 init_command, SInt32 init_arg, SInt32 repeated_command, ALPSStatus_t *report) {
+    TPS2Request<9> request;
+    int byte0, cmd;
+    cmd = byte0 = 0;
+    
+    if (init_command) {
+        request.commands[cmd].command = kPS2C_SendMouseCommandAndCompareAck;
+        request.commands[cmd++].inOrOut = kDP_SetMouseResolution;
+        request.commands[cmd].command = kPS2C_SendMouseCommandAndCompareAck;
+        request.commands[cmd++].inOrOut = init_arg;
+    }
+    
+    
+    // 3X run command
+    request.commands[cmd].command = kPS2C_SendMouseCommandAndCompareAck;
+    request.commands[cmd++].inOrOut = repeated_command;
+    request.commands[cmd].command = kPS2C_SendMouseCommandAndCompareAck;
+    request.commands[cmd++].inOrOut = repeated_command;
+    request.commands[cmd].command = kPS2C_SendMouseCommandAndCompareAck;
+    request.commands[cmd++].inOrOut = repeated_command;
+    
+    // Get info/result
+    request.commands[cmd].command = kPS2C_SendMouseCommandAndCompareAck;
+    request.commands[cmd++].inOrOut = kDP_GetMouseInformation;
+    byte0 = cmd;
+    request.commands[cmd].command = kPS2C_ReadDataPort;
+    request.commands[cmd++].inOrOut = 0;
+    request.commands[cmd].command = kPS2C_ReadDataPort;
+    request.commands[cmd++].inOrOut = 0;
+    request.commands[cmd].command = kPS2C_ReadDataPort;
+    request.commands[cmd++].inOrOut = 0;
+    request.commandsCount = cmd;
+    assert(request.commandsCount <= countof(request.commands));
+    _device->submitRequestAndBlock(&request);
+    
+    report->bytes[0] = request.commands[byte0].inOrOut;
+    report->bytes[1] = request.commands[byte0+1].inOrOut;
+    report->bytes[2] = request.commands[byte0+2].inOrOut;
+    
+    DEBUG_LOG("%02x report: [0x%02x 0x%02x 0x%02x]\n",
+              repeated_command,
+              report->bytes[0],
+              report->bytes[1],
+              report->bytes[2]);
+    
+    return request.commandsCount == cmd;
+}
 
 bool ALPS::alps_enter_command_mode() {
     DEBUG_LOG("enter command mode\n");
@@ -1741,6 +2316,123 @@ void ALPS::set_protocol() {
     }
 }
 
+bool ALPS::matchTable(ALPSStatus_t *e7, ALPSStatus_t *ec) {
+    const struct alps_model_info *model;
+    int i;
+  
+    IOLog("ALPS: Touchpad with Signature { %d, %d, %d }", e7->bytes[0], e7->bytes[1], e7->bytes[2]);
+  
+    for (i = 0; i < ARRAY_SIZE(alps_model_data); i++) {
+        model = &alps_model_data[i];
+        
+        if (!memcmp(e7->bytes, model->signature, sizeof(model->signature)) &&
+            (!model->command_mode_resp ||
+             model->command_mode_resp == ec->bytes[2])) {
+                
+                priv.proto_version = model->proto_version;
+                
+                // log model version:
+                if (priv.proto_version == ALPS_PROTO_V1) {
+                    IOLog("ALPS: Found an ALPS V1 TouchPad\n");
+                } else if (priv.proto_version == ALPS_PROTO_V2) {
+                    IOLog("ALPS: Found an ALPS V2 TouchPad\n");
+                } else if (priv.proto_version == ALPS_PROTO_V3_RUSHMORE) {
+                    IOLog("ALPS: Found an ALPS V3 Rushmore TouchPad\n!");
+                } else if (priv.proto_version == ALPS_PROTO_V4) {
+                    IOLog("ALPS: Found an ALPS V4 TouchPad\n");
+                }else if (priv.proto_version == ALPS_PROTO_V6) {
+                    IOLog("ALPS: Found an ALPS V6 TouchPad\n");
+                }
+                
+                set_protocol();
+                
+                priv.flags = model->flags;
+                priv.byte0 = model->byte0;
+                priv.mask0 = model->mask0;
+                
+                return true;
+            }
+    }
+    
+    return false;
+}
+
+IOReturn ALPS::identify() {
+    ALPSStatus_t e6, e7, ec;
+    
+    /*
+     * First try "E6 report".
+     * ALPS should return 0,0,10 or 0,0,100 if no buttons are pressed.
+     * The bits 0-2 of the first byte will be 1s if some buttons are
+     * pressed.
+     */
+    
+    if (!alps_rpt_cmd(kDP_SetMouseResolution, NULL, kDP_SetMouseScaling1To1, &e6)) {
+        IOLog("ALPS: identify: not an ALPS device. Error getting E6 report\n");
+        //return kIOReturnIOError;
+    }
+    
+    if ((e6.bytes[0] & 0xf8) != 0 || e6.bytes[1] != 0 || (e6.bytes[2] != 10 && e6.bytes[2] != 100)) {
+        IOLog("ALPS: identify: not an ALPS device. Invalid E6 report\n");
+        //return kIOReturnInvalid;
+    }
+    
+    /*
+     * Now get the "E7" and "EC" reports.  These will uniquely identify
+     * most ALPS touchpads.
+     */
+    if (!(alps_rpt_cmd(kDP_SetMouseResolution, NULL, kDP_SetMouseScaling2To1, &e7) &&
+          alps_rpt_cmd(kDP_SetMouseResolution, NULL, kDP_MouseResetWrap, &ec) &&
+          alps_exit_command_mode())) {
+        IOLog("ALPS: identify: not an ALPS device. Error getting E7/EC report\n");
+        return kIOReturnIOError;
+    }
+    
+    if (matchTable(&e7, &ec)) {
+        return 0;
+        
+    } else if (e7.bytes[0] == 0x73 && e7.bytes[1] == 0x03 && e7.bytes[2] == 0x50 &&
+               ec.bytes[0] == 0x73 && (ec.bytes[1] == 0x01 || ec.bytes[1] == 0x02)) {
+        priv.proto_version = ALPS_PROTO_V5;
+        IOLog("ALPS: Found a V5 Dolphin TouchPad with ID: E7=0x%02x 0x%02x 0x%02x, EC=0x%02x 0x%02x 0x%02x\n", e7.bytes[0], e7.bytes[1], e7.bytes[2], ec.bytes[0], ec.bytes[1], ec.bytes[2]);
+        
+    } else if (ec.bytes[0] == 0x88 &&
+               ((ec.bytes[1] & 0xf0) == 0xb0 || (ec.bytes[1] & 0xf0) == 0xc0)) {
+        priv.proto_version = ALPS_PROTO_V7;
+        IOLog("ALPS: Found a V7 TouchPad with ID: E7=0x%02x 0x%02x 0x%02x, EC=0x%02x 0x%02x 0x%02x\n", e7.bytes[0], e7.bytes[1], e7.bytes[2], ec.bytes[0], ec.bytes[1], ec.bytes[2]);
+        
+    } else if (ec.bytes[0] == 0x88 && ec.bytes[1] == 0x08) {
+        priv.proto_version = ALPS_PROTO_V3_RUSHMORE;
+        IOLog("ALPS: Found a V3 Rushmore TouchPad with ID: E7=0x%02x 0x%02x 0x%02x, EC=0x%02x 0x%02x 0x%02x\n", e7.bytes[0], e7.bytes[1], e7.bytes[2], ec.bytes[0], ec.bytes[1], ec.bytes[2]);
+        
+    } else if (ec.bytes[0] == 0x88 && ec.bytes[1] == 0x07 &&
+               ec.bytes[2] >= 0x90 && ec.bytes[2] <= 0x9d) {
+        priv.proto_version = ALPS_PROTO_V3;
+        IOLog("ALPS: Found a V3 Pinnacle TouchPad with ID: E7=0x%02x 0x%02x 0x%02x, EC=0x%02x 0x%02x 0x%02x\n", e7.bytes[0], e7.bytes[1], e7.bytes[2], ec.bytes[0], ec.bytes[1], ec.bytes[2]);
+        
+    } else if (e7.bytes[0] == 0x73 && e7.bytes[1] == 0x03 &&
+               e7.bytes[2] == 0x14 && ec.bytes[1] == 0x02) {
+        priv.proto_version = ALPS_PROTO_V8;
+        IOLog("ALPS: Found a V8 TouchPad with ID: E7=0x%02x 0x%02x 0x%02x, EC=0x%02x 0x%02x 0x%02x\n", e7.bytes[0], e7.bytes[1], e7.bytes[2], ec.bytes[0], ec.bytes[1], ec.bytes[2]);
+        
+        
+    } else if (e7.bytes[0] == 0x73 && e7.bytes[1] == 0x03 &&
+               e7.bytes[2] == 0x28 && ec.bytes[1] == 0x01) {
+        priv.proto_version = ALPS_PROTO_V8;
+        IOLog("ALPS: Found a V8 Flare TouchPad with ID: E7=0x%02x 0x%02x 0x%02x, EC=0x%02x 0x%02x 0x%02x\n", e7.bytes[0], e7.bytes[1], e7.bytes[2], ec.bytes[0], ec.bytes[1], ec.bytes[2]);
+        
+        
+    } else {
+        IOLog("ALPS DRIVER: TouchPad didn't match any known IDs: E7=0x%02x 0x%02x 0x%02x, EC=0x%02x 0x%02x 0x%02x ... driver will now exit\n",
+              e7.bytes[0], e7.bytes[1], e7.bytes[2], ec.bytes[0], ec.bytes[1], ec.bytes[2]);
+        return kIOReturnInvalid;
+    }
+    
+    /* Save the Firmware version */
+    memcpy(priv.fw_ver, ec.bytes, 3);
+    set_protocol();
+    return 0;
+}
 
 /* ============================================================================================== */
 /* ===========================||\\PROCESS AND DISPATCH TO macOS//||============================== */

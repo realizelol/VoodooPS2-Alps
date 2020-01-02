@@ -90,19 +90,14 @@ enum SS4_PACKET_ID {
 class V8Protocol : public Protocol
 {
   typedef Protocol super;
-
 public:
-  
   V8Protocol (struct alps_data *priv) : Protocol(priv) {};
-
 private:
-  
   unsigned char alps_get_pkt_id_ss4_v2(UInt8 *byte);
   void decodePacket(struct alps_fields *f, UInt8 *packet);
   
 protected:
-  
-  struct alps_fields* processPacket(struct alps_fields *f, UInt8 *packet);
+  struct alps_fields processPacket(UInt8 *packet);
 
 };
 
