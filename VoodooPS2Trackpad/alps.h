@@ -42,7 +42,6 @@ enum V7_PACKET_ID {
 
 class ALPS;
 
-
 // Pulled out of alps_data, now saved as vars on class
 // makes invoking a little easier
 typedef bool (ALPS::*hw_init)();
