@@ -10,7 +10,6 @@
 #include <IOKit/hidsystem/IOHIPointing.h>
 #include <IOKit/IOCommandGate.h>
 #include "Decay.h"
-#include "../VoodooInput/VoodooInput/VoodooInputMultitouch/VoodooInputEvent.h"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // VoodooPS2TouchPadBase Class Declaration
@@ -51,8 +50,11 @@ protected:
 	int wlimit, wvdivisor, whdivisor;
 	bool clicking;
 	bool dragging;
+    int threefingervertswipe;
+    int threefingerhorizswipe;
 	bool draglock;
     int draglocktemp;
+	bool hscroll, vscroll, scroll;
 	bool rtap;
     bool outzone_wt, palm, palm_wt;
     int zlimit;
@@ -107,6 +109,8 @@ protected:
     int touchx, touchy;
 	uint64_t touchtime;
 	uint64_t untouchtime;
+	bool wasdouble,wastriple;
+    bool scrolldebounce;
     uint64_t keytime;
     bool ignoreall;
     UInt32 passbuttons;
@@ -159,16 +163,52 @@ protected:
     int momentumscrolldivisor;
     int momentumscrollrest2;
     int momentumscrollsamplesmin;
+
+    // timer for drag delay
+    uint64_t dragexitdelay;
+    uint64_t scrollexitdelay;
+    IOTimerEventSource* dragTimer;
+    
+    IOTimerEventSource* scrollDebounceTIMER;
     
     SimpleAverage<int, 5> x_avg;
     SimpleAverage<int, 5> y_avg;
+    //DecayingAverage<int, int64_t, 1, 1, 2> x_avg;
+    //DecayingAverage<int, int64_t, 1, 1, 2> y_avg;
     UndecayAverage<int, int64_t, 1, 1, 2> x_undo;
     UndecayAverage<int, int64_t, 1, 1, 2> y_undo;
 
     SimpleAverage<int, 5> x2_avg;
     SimpleAverage<int, 5> y2_avg;
+    //DecayingAverage<int, int64_t, 1, 1, 2> x2_avg;
+    //DecayingAverage<int, int64_t, 1, 1, 2> y2_avg;
     UndecayAverage<int, int64_t, 1, 1, 2> x2_undo;
     UndecayAverage<int, int64_t, 1, 1, 2> y2_undo;
+
+	enum
+    {
+        // "no touch" modes... must be even (see isTouchMode)
+        MODE_NOTOUCH =      0,
+		MODE_PREDRAG =      2,
+        MODE_DRAGNOTOUCH =  4,
+
+        // "touch" modes... must be odd (see isTouchMode)
+        MODE_MOVE =         1,
+        MODE_VSCROLL =      3,
+        MODE_HSCROLL =      5,
+        MODE_CSCROLL =      7,
+        MODE_MTOUCH =       9,
+        MODE_DRAG =         11,
+        MODE_DRAGLOCK =     13,
+
+        // special modes for double click in LED area to enable/disable
+        // same "touch"/"no touch" odd/even rule (see isTouchMode)
+        MODE_WAIT1RELEASE = 101,    // "touch"
+        MODE_WAIT2TAP =     102,    // "no touch"
+        MODE_WAIT2RELEASE = 103,    // "touch"
+    } touchmode;
+
+    inline bool isTouchMode() { return touchmode & 1; }
 
     inline bool isInDisableZone(int x, int y)
         { return x > diszl && x < diszr && y > diszb && y < diszt; }
@@ -176,6 +216,9 @@ protected:
     // Sony: coordinates captured from single touch event
     // Don't know what is the exact value of x and y on edge of touchpad
     // the best would be { return x > xmax/2 && y < ymax/4; }
+
+    inline bool isInRightClickZone(int x, int y)
+        { return x > rczl && x < rczr && y > rczb && y < rczt; }
 
     virtual void   setTouchPadEnable( bool enable ) = 0;
 	virtual PS2InterruptResult interruptOccurred(UInt8 data) = 0;
@@ -190,8 +233,11 @@ protected:
 
     inline bool isFingerTouch(int z) { return z>z_finger; }
 
+    void onScrollTimer(void);
+    void onScrollDebounceTimer(void);
     void onButtonTimer(void);
-  
+    void onDragTimer(void);
+
     enum MBComingFrom { fromPassthru, fromTimer, fromTrackpad, fromCancel };
     UInt32 middleButton(UInt32 buttons, uint64_t now, MBComingFrom from);
 

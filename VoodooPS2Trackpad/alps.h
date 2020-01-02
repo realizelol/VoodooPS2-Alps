@@ -20,8 +20,99 @@
  * @APPLE_LICENSE_HEADER_END@
  */
 
-#include "VoodooPS2AlpsTrackpadBase.h"
-#include "VoodooPS2AlpsTrackpadKonstants.h"
+#include "VoodooPS2TouchPadBase.h"
+
+#define ALPS_PROTO_V1	0x100
+#define ALPS_PROTO_V2	0x200
+#define ALPS_PROTO_V3	0x300
+#define ALPS_PROTO_V3_RUSHMORE	0x310
+#define ALPS_PROTO_V4	0x400
+#define ALPS_PROTO_V5	0x500
+#define ALPS_PROTO_V6	0x600
+#define ALPS_PROTO_V7		0x700	/* t3btl t4s */
+#define ALPS_PROTO_V8		0x800	/* SS4btl SS4s */
+
+#define MAX_TOUCHES     4
+
+#define DOLPHIN_COUNT_PER_ELECTRODE	64
+#define DOLPHIN_PROFILE_XOFFSET		8	/* x-electrode offset */
+#define DOLPHIN_PROFILE_YOFFSET		1	/* y-electrode offset */
+
+/*
+ * enum SS4_PACKET_ID - defines the packet type for V8
+ * SS4_PACKET_ID_IDLE: There's no finger and no button activity.
+ * SS4_PACKET_ID_ONE: There's one finger on touchpad
+ *  or there's button activities.
+ * SS4_PACKET_ID_TWO: There's two or more fingers on touchpad
+ * SS4_PACKET_ID_MULTI: There's three or more fingers on touchpad
+ */
+enum SS4_PACKET_ID {
+    SS4_PACKET_ID_IDLE = 0,
+    SS4_PACKET_ID_ONE,
+    SS4_PACKET_ID_TWO,
+    SS4_PACKET_ID_MULTI,
+    SS4_PACKET_ID_STICK,
+};
+
+#define SS4_COUNT_PER_ELECTRODE		256
+#define SS4_NUMSENSOR_XOFFSET		7
+#define SS4_NUMSENSOR_YOFFSET		7
+#define SS4_MIN_PITCH_MM		50
+
+#define SS4_MASK_NORMAL_BUTTONS		0x07
+
+#define SS4_1F_X_V2(_b)		((_b[0] & 0x0007) |		\
+((_b[1] << 3) & 0x0078) |	\
+((_b[1] << 2) & 0x0380) |	\
+((_b[2] << 5) & 0x1C00)	\
+)
+
+#define SS4_1F_Y_V2(_b)		(((_b[2]) & 0x000F) |		\
+((_b[3] >> 2) & 0x0030) |	\
+((_b[4] << 6) & 0x03C0) |	\
+((_b[4] << 5) & 0x0C00)	\
+)
+
+#define SS4_1F_Z_V2(_b)		(((_b[5]) & 0x0F) |		\
+((_b[5] >> 1) & 0x70) |	\
+((_b[4]) & 0x80)		\
+)
+
+#define SS4_1F_LFB_V2(_b)	(((_b[2] >> 4) & 0x01) == 0x01)
+
+#define SS4_MF_LF_V2(_b, _i)	((_b[1 + (_i) * 3] & 0x0004) == 0x0004)
+
+#define SS4_BTN_V2(_b)		((_b[0] >> 5) & SS4_MASK_NORMAL_BUTTONS)
+
+#define SS4_STD_MF_X_V2(_b, _i)	(((_b[0 + (_i) * 3] << 5) & 0x00E0) |	\
+((_b[1 + _i * 3]  << 5) & 0x1F00)	\
+)
+
+#define SS4_STD_MF_Y_V2(_b, _i)	(((_b[1 + (_i) * 3] << 3) & 0x0010) |	\
+((_b[2 + (_i) * 3] << 5) & 0x01E0) |	\
+((_b[2 + (_i) * 3] << 4) & 0x0E00)	\
+)
+
+#define SS4_BTL_MF_X_V2(_b, _i)	(SS4_STD_MF_X_V2(_b, _i) |		\
+((_b[0 + (_i) * 3] >> 3) & 0x0010)	\
+)
+
+#define SS4_BTL_MF_Y_V2(_b, _i)	(SS4_STD_MF_Y_V2(_b, _i) | \
+((_b[0 + (_i) * 3] >> 3) & 0x0008)	\
+)
+
+#define SS4_MF_Z_V2(_b, _i)	(((_b[1 + (_i) * 3]) & 0x0001) |	\
+((_b[1 + (_i) * 3] >> 1) & 0x0002)	\
+)
+
+#define SS4_IS_MF_CONTINUE(_b)	((_b[2] & 0x10) == 0x10)
+#define SS4_IS_5F_DETECTED(_b)	((_b[2] & 0x10) == 0x10)
+
+
+#define SS4_MFPACKET_NO_AX	8160	/* X-Coordinate value */
+#define SS4_MFPACKET_NO_AY	4080	/* Y-Coordinate value */
+#define SS4_MFPACKET_NO_AX_BL	8176	/* Buttonless X-Coordinate value */
+#define SS4_MFPACKET_NO_AY_BL	4088	/* Buttonless Y-Coordinate value */
 
 /*
  * enum V7_PACKET_ID - defines the packet type for V7
@@ -83,9 +174,103 @@ struct alps_nibble_commands {
     UInt8 data;
 };
 
+struct alps_bitmap_point {
+    int start_bit;
+    int num_bits;
+};
+
+struct input_mt_pos {
+    UInt32 x;
+    UInt32 y;
+};
+
+/**
+ * struct alps_fields - decoded version of the report packet
+ * @x_map: Bitmap of active X positions for MT.
+ * @y_map: Bitmap of active Y positions for MT.
+ * @fingers: Number of fingers for MT.
+ * @pressure: Pressure.
+ * @st: position for ST.
+ * @mt: position for MT.
+ * @first_mp: Packet is the first of a multi-packet report.
+ * @is_mp: Packet is part of a multi-packet report.
+ * @left: Left touchpad button is active.
+ * @right: Right touchpad button is active.
+ * @middle: Middle touchpad button is active.
+ * @ts_left: Left trackstick button is active.
+ * @ts_right: Right trackstick button is active.
+ * @ts_middle: Middle trackstick button is active.
+ */
+struct alps_fields {
+    UInt32 x_map;
+    UInt32 y_map;
+    UInt32 fingers;
+    
+    int pressure;
+    struct input_mt_pos st;
+    struct input_mt_pos mt[MAX_TOUCHES];
+    
+    UInt32 first_mp:1;
+    UInt32 is_mp:1;
+    
+    UInt32 left:1;
+    UInt32 right:1;
+    UInt32 middle:1;
+    
+    UInt32 ts_left:1;
+    UInt32 ts_right:1;
+    UInt32 ts_middle:1;
+};
 
 class ALPS;
 
+/**
+ * struct alps_data - private data structure for the ALPS driver
+ * @nibble_commands: Command mapping used for touchpad register accesses.
+ * @addr_command: Command used to tell the touchpad that a register address
+ *   follows.
+ * @proto_version: Indicates V1/V2/V3/...
+ * @byte0: Helps figure out whether a position report packet matches the
+ *   known format for this model.  The first byte of the report, ANDed with
+ *   mask0, should match byte0.
+ * @mask0: The mask used to check the first byte of the report.
+ * @fw_ver: cached copy of firmware version (EC report)
+ * @flags: Additional device capabilities (passthrough port, trackstick, etc.).
+ * @x_max: Largest possible X position value.
+ * @y_max: Largest possible Y position value.
+ * @x_bits: Number of X bits in the MT bitmap.
+ * @y_bits: Number of Y bits in the MT bitmap.
+ * @prev_fin: Finger bit from previous packet.
+ * @multi_packet: Multi-packet data in progress.
+ * @multi_data: Saved multi-packet data.
+ * @f: Decoded packet data fields.
+ * @quirks: Bitmap of ALPS_QUIRK_*.
+ */
+struct alps_data {
+    /* these are autodetected when the device is identified */
+    const struct alps_nibble_commands *nibble_commands;
+    SInt32 addr_command;
+    UInt16 proto_version;
+    UInt8 byte0, mask0;
+    UInt8 fw_ver[3];
+    int flags;
+    SInt32 x_max;
+    SInt32 y_max;
+    SInt32 x_bits;
+    SInt32 y_bits;
+    unsigned int x_res;
+    unsigned int y_res;
+    
+    SInt32 prev_fin;
+    SInt32 multi_packet;
+    int second_touch;
+    UInt8 multi_data[6];
+    struct alps_fields f;
+    UInt8 quirks;
+    bool PSMOUSE_BAD_DATA;
+    
+    int pktsize = 6;
+};
 
 // Pulled out of alps_data, now saved as vars on class
 // makes invoking a little easier
@@ -104,6 +289,11 @@ typedef struct ALPSStatus {
     UInt8 bytes[3];
 } ALPSStatus_t;
 
+#define kPacketLengthSmall  3
+#define kPacketLengthLarge  6
+#define kPacketLengthMax    6
+#define kDP_CommandNibble10 0xf2
+#define BITS_PER_BYTE 8
 
 // predeclure stuff
 struct alps_data;
@@ -117,9 +307,6 @@ private:
     hw_init hw_init;
     decode_fields decode_fields;
     process_packet process_packet;
-    
-    IOService *voodooInputInstance;
-    VoodooInputEvent inputEvent;
     //    set_abs_params set_abs_params;
     
 public:
@@ -175,6 +362,12 @@ protected:
     void alps_process_touchpad_packet_v7(UInt8 *packet);
     
     void alps_process_packet_v7(UInt8 *packet);
+    
+    unsigned char alps_get_pkt_id_ss4_v2(UInt8 *byte);
+    
+    bool alps_decode_ss4_v2(struct alps_fields *f, UInt8 *p);
+    
+    void alps_process_packet_ss4_v2(UInt8 *packet);
     
     void dispatchEventsWithInfo(int xraw, int yraw, int z, int fingers, UInt32 buttonsraw);
     
@@ -250,6 +443,8 @@ protected:
     
     bool alps_hw_init_v7();
     
+    bool alps_hw_init_ss4_v2();
+    
     void ps2_command_short(UInt8 command);
     
     void ps2_command(unsigned char value, UInt8 command);
@@ -257,9 +452,7 @@ protected:
     void set_protocol();
     
     bool matchTable(ALPSStatus_t *e7, ALPSStatus_t *ec);
-  
-    bool alps_hw_init_ss4_v2();
-  
+    
     IOReturn identify();
     
     void restart();
