@@ -223,6 +223,8 @@ bool ALPS::init(OSDictionary *dict) {
         return false;
     }
     
+    memset(&inputEvent, 0, sizeof(VoodooInputEvent));
+    
     // Intialize Variables
     lastx=0;
     lasty=0;

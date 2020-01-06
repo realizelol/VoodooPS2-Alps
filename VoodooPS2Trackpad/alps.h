@@ -21,6 +21,7 @@
  */
 
 #include "VoodooPS2TouchPadBase.h"
+#include "../VoodooInput/VoodooInput/VoodooInputMultitouch/VoodooInputEvent.h"
 
 #define ALPS_PROTO_V1	0x100
 #define ALPS_PROTO_V2	0x200
@@ -303,6 +304,8 @@ class EXPORT ALPS : public VoodooPS2TouchPadBase {
     OSDeclareDefaultStructors( ALPS );
     
 private:
+    VoodooInputEvent inputEvent;
+    
     alps_data priv;
     hw_init hw_init;
     decode_fields decode_fields;

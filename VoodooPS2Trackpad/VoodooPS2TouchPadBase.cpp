@@ -1025,4 +1025,22 @@ void VoodooPS2TouchPadBase::receiveMessage(int message, void* data)
             break;
         }
     }
+    
+}
+
+// Acidanthera VoodooPS2
+bool VoodooPS2TouchPadBase::handleOpen(IOService *forClient, IOOptionBits options, void *arg) {
+    if (forClient && forClient->getProperty(VOODOO_INPUT_IDENTIFIER)) {
+        voodooInputInstance = forClient;
+        voodooInputInstance->retain();
+
+        return true;
+    }
+
+    return super::handleOpen(forClient, options, arg);
+}
+
+void VoodooPS2TouchPadBase::handleClose(IOService *forClient, IOOptionBits options) {
+    OSSafeReleaseNULL(voodooInputInstance);
+    super::handleClose(forClient, options);
 }

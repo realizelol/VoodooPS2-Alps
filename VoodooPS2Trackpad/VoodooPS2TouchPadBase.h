@@ -23,6 +23,10 @@ class EXPORT VoodooPS2TouchPadBase : public IOHIPointing
     OSDeclareAbstractStructors(VoodooPS2TouchPadBase);
 
 protected:
+    
+    // VoodooInput
+    IOService *voodooInputInstance;
+    
     ApplePS2MouseDevice * _device;
     bool                _interruptHandlerInstalled;
     bool                _powerControlHandlerInstalled;
@@ -243,8 +247,8 @@ protected:
 
     virtual void setParamPropertiesGated(OSDictionary* dict);
 
-	virtual IOItemCount buttonCount();
-	virtual IOFixed     resolution();
+    virtual IOItemCount buttonCount() override;
+    virtual IOFixed     resolution() override;
     virtual bool deviceSpecificInit() = 0;
     inline void dispatchRelativePointerEventX(int dx, int dy, UInt32 buttonState, uint64_t now)
         { dispatchRelativePointerEvent(dx, dy, buttonState, *(AbsoluteTime*)&now); }
@@ -256,17 +260,21 @@ protected:
         { timer->cancelTimeout(); }
 
 public:
-    virtual bool init( OSDictionary * properties );
+    virtual bool init( OSDictionary * properties ) override;
     virtual VoodooPS2TouchPadBase * probe( IOService * provider,
-                                               SInt32 *    score ) = 0;
-    virtual bool start( IOService * provider );
-    virtual void stop( IOService * provider );
+                                               SInt32 *    score ) override = 0;
+    virtual bool start( IOService * provider ) override;
+    virtual void stop( IOService * provider ) override;
 
-    virtual UInt32 deviceType();
-    virtual UInt32 interfaceID();
+    virtual UInt32 deviceType() override;
+    virtual UInt32 interfaceID() override;
 
-	virtual IOReturn setParamProperties(OSDictionary * dict);
-	virtual IOReturn setProperties(OSObject *props);
+	virtual IOReturn setParamProperties(OSDictionary * dict) override;
+    virtual IOReturn setProperties(OSObject *props) override;
+    
+    // Acidanthera VoodooPS2
+    bool handleOpen(IOService *forClient, IOOptionBits options, void *arg) override;
+    void handleClose(IOService *forClient, IOOptionBits options) override;
 };
 
 #endif //__VoodooPS2TouchPadBase_H_
