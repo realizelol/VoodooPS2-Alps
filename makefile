@@ -14,8 +14,12 @@ endif
 
 .PHONY: all
 all:
-	xcodebuild build $(OPTIONS) -scheme All -configuration Debug
-	xcodebuild build $(OPTIONS) -scheme All -configuration Release
+	xcodebuild build $(OPTIONS) -scheme VoodooPS2Trackpad -configuration Debug
+	xcodebuild build $(OPTIONS) -scheme VoodooPS2Keyboard -configuration Debug
+	xcodebuild build $(OPTIONS) -scheme VoodooPS2Controller -configuration Debug
+	xcodebuild build $(OPTIONS) -scheme VoodooPS2Trackpad -configuration Release
+	xcodebuild build $(OPTIONS) -scheme VoodooPS2Keyboard -configuration Release
+	xcodebuild build $(OPTIONS) -scheme VoodooPS2Controller -configuration Release
 
 .PHONY: clean
 clean:

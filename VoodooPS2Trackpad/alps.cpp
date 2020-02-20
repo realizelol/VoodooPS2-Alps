@@ -511,9 +511,27 @@ int ALPS::alps_process_bitmap(struct alps_data *priv,
     
     fields->mt[0] = fields->st;
     fields->mt[1] = corner[priv->second_touch];
+  
+#if DEBUG
+    IOLog("ALPS: BITMAP\n");
     
-    //IOLog("ALPS: Process Bitmap, Corner=%d, Fingers=%d, x1=%d, x2=%d, y1=%d, y2=%d\n", priv->second_touch, fingers, fields->mt[0].x, fields->mt[1].x, fields->mt[0].y, fields->mt[1].y);
-    return fingers;
+    unsigned int ymap = fields->y_map;
+    
+    for (int i = 0; ymap != 0; i++, ymap >>= 1) {
+      unsigned int xmap = fields->x_map;
+      char bitLog[160];
+      strlcpy(bitLog, "ALPS: ", sizeof("ALPS: ") + 1);
+      
+      for (int j = 0; xmap != 0; j++, xmap >>= 1) {
+        strcat(bitLog, (ymap & 1 && xmap & 1) ? "1 " : "0 ");
+      }
+      
+      IOLog("%s\n", bitLog);
+    }
+  
+    IOLog("ALPS: Process Bitmap, Corner=%d, Fingers=%d, x1=%d, x2=%d, y1=%d, y2=%d xmap=%d ymap=%d\n", priv->second_touch, fingers, fields->mt[0].x, fields->mt[1].x, fields->mt[0].y, fields->mt[1].y, fields->x_map, fields->y_map);
+#endif // DEBUG
+  return fingers;
 }
 
 void ALPS::alps_process_trackstick_packet_v3(UInt8 *packet) {
