@@ -7,7 +7,7 @@
 #include <IOKit/IOWorkLoop.h>
 #include <IOKit/IOTimerEventSource.h>
 #include "VoodooPS2Controller.h"
-#include "VoodooPS2TouchPadBase.h"
+#include "VoodooPS2AlpsBase.h"
 
 // =============================================================================
 // VoodooPS2TouchPadBase Class Implementation

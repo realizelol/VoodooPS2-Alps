@@ -20,7 +20,7 @@
  * @APPLE_LICENSE_HEADER_END@
  */
 
-#include "VoodooPS2TouchPadBase.h"
+#include "VoodooPS2AlpsBase.h"
 #include "../VoodooInput/VoodooInput/VoodooInputMultitouch/VoodooInputEvent.h"
 
 #define ALPS_PROTO_V1	0x100

@@ -11,6 +11,9 @@
 #include <IOKit/IOCommandGate.h>
 #include "Decay.h"
 
+#include "../VoodooInput/VoodooInput/VoodooInputMultitouch/VoodooInputTransducer.h"
+#include "../VoodooInput/VoodooInput/VoodooInputMultitouch/VoodooInputMessages.h"
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // VoodooPS2TouchPadBase Class Declaration
 //
