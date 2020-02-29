@@ -1086,8 +1086,8 @@ void ALPS::alps_process_trackstick_packet_v7(UInt8 *packet)
                 ((packet[3] & 0x20) << 1));
     z = (packet[5] & 0x3f) | ((packet[3] & 0x80) >> 1);
     
-    // X is inverted
-    x = -x;
+    // Y is inverted
+    y = -y;
   
     left = (packet[1] & 0x01);
     right = (packet[1] & 0x02) >> 1;
