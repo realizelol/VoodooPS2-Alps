@@ -513,9 +513,27 @@ int ALPS::alps_process_bitmap(struct alps_data *priv,
     
     fields->mt[0] = fields->st;
     fields->mt[1] = corner[priv->second_touch];
+  
+#if DEBUG
+    IOLog("ALPS: BITMAP\n");
     
-    //IOLog("ALPS: Process Bitmap, Corner=%d, Fingers=%d, x1=%d, x2=%d, y1=%d, y2=%d\n", priv->second_touch, fingers, fields->mt[0].x, fields->mt[1].x, fields->mt[0].y, fields->mt[1].y);
-    return fingers;
+    unsigned int ymap = fields->y_map;
+    
+    for (int i = 0; ymap != 0; i++, ymap >>= 1) {
+      unsigned int xmap = fields->x_map;
+      char bitLog[160];
+      strlcpy(bitLog, "ALPS: ", sizeof("ALPS: ") + 1);
+      
+      for (int j = 0; xmap != 0; j++, xmap >>= 1) {
+        strcat(bitLog, (ymap & 1 && xmap & 1) ? "1 " : "0 ");
+      }
+      
+      IOLog("%s\n", bitLog);
+    }
+  
+    IOLog("ALPS: Process Bitmap, Corner=%d, Fingers=%d, x1=%d, x2=%d, y1=%d, y2=%d xmap=%d ymap=%d\n", priv->second_touch, fingers, fields->mt[0].x, fields->mt[1].x, fields->mt[0].y, fields->mt[1].y, fields->x_map, fields->y_map);
+#endif // DEBUG
+  return fingers;
 }
 
 void ALPS::alps_process_trackstick_packet_v3(UInt8 *packet) {
@@ -1056,17 +1074,23 @@ void ALPS::alps_process_trackstick_packet_v7(UInt8 *packet)
     int x, y, z, left, right, middle;
     int buttons = 0;
     
+    uint64_t now_abs;
+    clock_get_uptime(&now_abs);
+  
     /* It should be a DualPoint when received trackstick packet */
     if (!(priv.flags & ALPS_DUALPOINT)) {
         IOLog("ALPS: Rejected trackstick packet from non DualPoint device");
         return;
     }
     
-    x = ((packet[2] & 0xbf)) | ((packet[3] & 0x10) << 2);
-    y = (packet[3] & 0x07) | (packet[4] & 0xb8) |
-    ((packet[3] & 0x20) << 1);
+    x = (SInt8) ((packet[2] & 0xbf) | ((packet[3] & 0x10) << 2));
+    y = (SInt8) ((packet[3] & 0x07) | (packet[4] & 0xb8) |
+                ((packet[3] & 0x20) << 1));
     z = (packet[5] & 0x3f) | ((packet[3] & 0x80) >> 1);
     
+    // X is inverted
+    x = -x;
+  
     left = (packet[1] & 0x01);
     right = (packet[1] & 0x02) >> 1;
     middle = (packet[1] & 0x04) >> 2;
@@ -1075,8 +1099,15 @@ void ALPS::alps_process_trackstick_packet_v7(UInt8 *packet)
     buttons |= right ? 0x02 : 0;
     buttons |= middle ? 0x04 : 0;
     
-    //TODO: V7 Trackstick: Someone with the hardware needs to debug this.
-    //dispatchRelativePointerEventX(x, y, 0, now_abs);
+    lastTrackStickButtons = buttons;
+    buttons |= lastTouchpadButtons;
+    
+    /* If middle button is pressed, switch to scroll mode. Else, move pointer normally */
+    if (0 == (buttons & 0x04)) {
+        dispatchRelativePointerEventX(x, y, buttons, now_abs);
+    } else {
+        dispatchScrollWheelEventX(-y, -x, 0, now_abs);
+    }
 }
 
 void ALPS::alps_process_touchpad_packet_v7(UInt8 *packet){
@@ -1093,12 +1124,8 @@ void ALPS::alps_process_touchpad_packet_v7(UInt8 *packet){
     buttons |= f.right ? 0x02 : 0;
     buttons |= f.middle ? 0x04 : 0;
     
-    if ((priv.flags & ALPS_DUALPOINT) &&
-        !(priv.quirks & ALPS_QUIRK_TRACKSTICK_BUTTONS)) {
-        buttons |= f.ts_left ? 0x01 : 0;
-        buttons |= f.ts_right ? 0x02 : 0;
-        buttons |= f.ts_middle ? 0x04 : 0;
-    }
+    lastTouchpadButtons = buttons;
+    buttons |= lastTrackStickButtons;
     
     fingers = f.fingers;
     
@@ -2556,7 +2583,7 @@ void ALPS::set_protocol() {
             if (alps_probe_trackstick_v3_v7(ALPS_REG_BASE_V7)){
                 priv.flags &= ~ALPS_DUALPOINT;
             } else {
-                IOLog("ALPS: TrackStick detected... (WARNING: V7 TrackStick disabled)\n");
+                IOLog("ALPS: TrackStick detected...\n");
             }
             
             break;

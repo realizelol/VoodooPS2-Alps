@@ -107,6 +107,7 @@ protected:
     // normal state
 	int lastx, lasty, last_fingers, b4last;
     UInt32 lastbuttons;
+    UInt32 lastTrackStickButtons, lastTouchpadButtons;
     int ignoredeltas;
     int ignoresingle;
 	int xrest, yrest, scrollrest;
