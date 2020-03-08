@@ -1,284 +1,290 @@
-//
-// Created by Brandon Pedersen on 5/1/13.
-//
+/*
+ * Copyright (c) 2002 Apple Computer, Inc. All rights reserved.
+ *
+ * @APPLE_LICENSE_HEADER_START@
+ *
+ * The contents of this file constitute Original Code as defined in and
+ * are subject to the Apple Public Source License Version 1.2 (the
+ * "License").  You may not use this file except in compliance with the
+ * License.  Please obtain a copy of the License at
+ * http://www.apple.com/publicsource and read it before using this file.
+ *
+ * This Original Code and all software distributed under the License are
+ * distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, EITHER
+ * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
+ * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE OR NON-INFRINGEMENT.  Please see the
+ * License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * @APPLE_LICENSE_HEADER_END@
+ */
 
-#ifndef __VoodooPS2TouchPadBase_H_
-#define __VoodooPS2TouchPadBase_H_
+#include "VoodooPS2Touchpad.h"
+#include "../VoodooInput/VoodooInput/VoodooInputMultitouch/VoodooInputEvent.h"
 
-#include "ApplePS2MouseDevice.h"
-#include <IOKit/IOTimerEventSource.h>
-#include <IOKit/hidsystem/IOHIPointing.h>
-#include <IOKit/IOCommandGate.h>
-#include "Decay.h"
+#define ALPS_PROTO_V1	0x100
+#define ALPS_PROTO_V2	0x200
+#define ALPS_PROTO_V3	0x300
+#define ALPS_PROTO_V3_RUSHMORE	0x310
+#define ALPS_PROTO_V4	0x400
+#define ALPS_PROTO_V5	0x500
+#define ALPS_PROTO_V6	0x600
+#define ALPS_PROTO_V7		0x700	/* t3btl t4s */
+#define ALPS_PROTO_V8		0x800	/* SS4btl SS4s */
 
-#include "../VoodooInput/VoodooInput/VoodooInputMultitouch/VoodooInputTransducer.h"
-#include "../VoodooInput/VoodooInput/VoodooInputMultitouch/VoodooInputMessages.h"
+#define MAX_TOUCHES     4
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// VoodooPS2TouchPadBase Class Declaration
-//
 
-#define kPacketLength 6
 
-class EXPORT VoodooPS2TouchPadBase : public IOHIPointing
-{
-    typedef IOHIPointing super;
-    OSDeclareAbstractStructors(VoodooPS2TouchPadBase);
-
-protected:
-    
-    // VoodooInput
-    IOService *voodooInputInstance;
-    
-    ApplePS2MouseDevice * _device;
-    bool                _interruptHandlerInstalled;
-    bool                _powerControlHandlerInstalled;
-    bool                _messageHandlerInstalled;
-    RingBuffer<UInt8, kPacketLength*32> _ringBuffer;
-    UInt32              _packetByteCount;
-    UInt8               _lastdata;
-    UInt16              _touchPadVersion;
-
-    IOCommandGate*      _cmdGate;
-    int z_finger;
-	int divisorx, divisory;
-	int ledge;
-	int redge;
-	int tedge;
-	int bedge;
-	int vscrolldivisor, hscrolldivisor, cscrolldivisor;
-	int ctrigger;
-	int centerx;
-	int centery;
-	uint64_t maxtaptime;
-	uint64_t maxdragtime;
-    uint64_t maxdbltaptime;
-	int hsticky,vsticky, wsticky, tapstable;
-	int wlimit, wvdivisor, whdivisor;
-	bool clicking;
-	bool dragging;
-    int threefingervertswipe;
-    int threefingerhorizswipe;
-	bool draglock;
-    int draglocktemp;
-	bool hscroll, vscroll, scroll;
-	bool rtap;
-    bool outzone_wt, palm, palm_wt;
-    int zlimit;
-    int noled;
-    uint64_t maxaftertyping;
-    int mousemultiplierx, mousemultipliery;
-    int mousescrollmultiplierx, mousescrollmultipliery;
-    int mousemiddlescroll;
-    int wakedelay;
-    int smoothinput;
-    int unsmoothinput;
-    int skippassthru;
-    int tapthreshx, tapthreshy;
-    int dblthreshx, dblthreshy;
-    int zonel, zoner, zonet, zoneb;
-    int diszl, diszr, diszt, diszb;
-    int diszctrl; // 0=automatic (ledpresent), 1=enable always, -1=disable always
-    int _resolution, _scrollresolution;
-    int swipedx, swipedy;
-    int _buttonCount;
-    int swapdoubletriple;
-    int draglocktempmask;
-    uint64_t clickpadclicktime;
-    int clickpadtrackboth;
-    int ignoredeltasstart;
-    int bogusdxthresh, bogusdythresh;
-    int scrolldxthresh, scrolldythresh;
-    int immediateclick;
-
-    // three finger and four finger state
-    uint8_t inSwipeLeft, inSwipeRight;
-    uint8_t inSwipeUp, inSwipeDown;
-    uint8_t inSwipe4Left, inSwipe4Right;
-    uint8_t inSwipe4Up, inSwipe4Down;
-    int xmoved, ymoved;
-
-    int rczl, rczr, rczb, rczt; // rightclick zone for 1-button ClickPads
-
-    // state related to secondary packets/extendedwmode
-    int lastx2, lasty2;
-    bool tracksecondary;
-    int xrest2, yrest2;
-    bool clickedprimary;
-    bool _extendedwmode;
-
-    // normal state
-	int lastx, lasty, last_fingers, b4last;
-    UInt32 lastbuttons;
-    UInt32 lastTrackStickButtons, lastTouchpadButtons;
-    int ignoredeltas;
-    int ignoresingle;
-	int xrest, yrest, scrollrest;
-    int touchx, touchy;
-	uint64_t touchtime;
-	uint64_t untouchtime;
-	bool wasdouble,wastriple;
-    bool scrolldebounce;
-    uint64_t keytime;
-    bool ignoreall;
-    UInt32 passbuttons;
-#ifdef SIMULATE_PASSTHRU
-    UInt32 trackbuttons;
-#endif
-    bool passthru;
-    bool ledpresent;
-    bool _reportsv;
-    int clickpadtype;   //0=not, 1=1button, 2=2button, 3=reserved
-    UInt32 _clickbuttons;  //clickbuttons to merge into buttons
-    int mousecount;
-    bool usb_mouse_stops_trackpad;
-
-    int _modifierdown; // state of left+right control keys
-    int scrollzoommask;
-
-    // for scaling x/y values
-    int xupmm, yupmm;
-
-    // for middle button simulation
-    enum mbuttonstate
-    {
-        STATE_NOBUTTONS,
-        STATE_MIDDLE,
-        STATE_WAIT4TWO,
-        STATE_WAIT4NONE,
-        STATE_NOOP,
-    } _mbuttonstate;
-
-    UInt32 _pendingbuttons;
-    uint64_t _buttontime;
-    IOTimerEventSource* _buttonTimer;
-    uint64_t _maxmiddleclicktime;
-    int _fakemiddlebutton;
-
-    // momentum scroll state
-    bool momentumscroll;
-    bool wasScroll = false;
-    SimpleAverage<int, 32> dy_history;
-    SimpleAverage<uint64_t, 32> time_history;
-    IOTimerEventSource* scrollTimer;
-    uint64_t momentumscrolltimer;
-    int momentumscrollthreshy;
-    uint64_t momentumscrollinterval;
-    int momentumscrollsum;
-    int64_t momentumscrollcurrent;
-    int64_t momentumscrollrest1;
-    int momentumscrollmultiplier;
-    int momentumscrolldivisor;
-    int momentumscrollrest2;
-    int momentumscrollsamplesmin;
-
-    // timer for drag delay
-    uint64_t dragexitdelay;
-    uint64_t scrollexitdelay;
-    IOTimerEventSource* dragTimer;
-    
-    IOTimerEventSource* scrollDebounceTIMER;
-    
-    SimpleAverage<int, 5> x_avg;
-    SimpleAverage<int, 5> y_avg;
-    //DecayingAverage<int, int64_t, 1, 1, 2> x_avg;
-    //DecayingAverage<int, int64_t, 1, 1, 2> y_avg;
-    UndecayAverage<int, int64_t, 1, 1, 2> x_undo;
-    UndecayAverage<int, int64_t, 1, 1, 2> y_undo;
-
-    SimpleAverage<int, 5> x2_avg;
-    SimpleAverage<int, 5> y2_avg;
-    //DecayingAverage<int, int64_t, 1, 1, 2> x2_avg;
-    //DecayingAverage<int, int64_t, 1, 1, 2> y2_avg;
-    UndecayAverage<int, int64_t, 1, 1, 2> x2_undo;
-    UndecayAverage<int, int64_t, 1, 1, 2> y2_undo;
-
-	enum
-    {
-        // "no touch" modes... must be even (see isTouchMode)
-        MODE_NOTOUCH =      0,
-		MODE_PREDRAG =      2,
-        MODE_DRAGNOTOUCH =  4,
-
-        // "touch" modes... must be odd (see isTouchMode)
-        MODE_MOVE =         1,
-        MODE_VSCROLL =      3,
-        MODE_HSCROLL =      5,
-        MODE_CSCROLL =      7,
-        MODE_MTOUCH =       9,
-        MODE_DRAG =         11,
-        MODE_DRAGLOCK =     13,
-
-        // special modes for double click in LED area to enable/disable
-        // same "touch"/"no touch" odd/even rule (see isTouchMode)
-        MODE_WAIT1RELEASE = 101,    // "touch"
-        MODE_WAIT2TAP =     102,    // "no touch"
-        MODE_WAIT2RELEASE = 103,    // "touch"
-    } touchmode;
-
-    inline bool isTouchMode() { return touchmode & 1; }
-
-    inline bool isInDisableZone(int x, int y)
-        { return x > diszl && x < diszr && y > diszb && y < diszt; }
-
-    // Sony: coordinates captured from single touch event
-    // Don't know what is the exact value of x and y on edge of touchpad
-    // the best would be { return x > xmax/2 && y < ymax/4; }
-
-    inline bool isInRightClickZone(int x, int y)
-        { return x > rczl && x < rczr && y > rczb && y < rczt; }
-
-    virtual void   setTouchPadEnable( bool enable ) = 0;
-	virtual PS2InterruptResult interruptOccurred(UInt8 data) = 0;
-    virtual void packetReady() = 0;
-    virtual void   setDevicePowerState(UInt32 whatToDo);
-
-    virtual void   receiveMessage(int message, void* data);
-
-    virtual void touchpadToggled() {};
-    virtual void touchpadShutdown() {};
-    virtual void initTouchPad();
-
-    inline bool isFingerTouch(int z) { return z>z_finger; }
-
-    void onScrollTimer(void);
-    void onScrollDebounceTimer(void);
-    void onButtonTimer(void);
-    void onDragTimer(void);
-
-    enum MBComingFrom { fromPassthru, fromTimer, fromTrackpad, fromCancel };
-    UInt32 middleButton(UInt32 buttons, uint64_t now, MBComingFrom from);
-
-    virtual void setParamPropertiesGated(OSDictionary* dict);
-
-    virtual IOItemCount buttonCount() override;
-    virtual IOFixed     resolution() override;
-    virtual bool deviceSpecificInit() = 0;
-    inline void dispatchRelativePointerEventX(int dx, int dy, UInt32 buttonState, uint64_t now)
-        { dispatchRelativePointerEvent(dx, dy, buttonState, *(AbsoluteTime*)&now); }
-    inline void dispatchScrollWheelEventX(short deltaAxis1, short deltaAxis2, short deltaAxis3, uint64_t now)
-        { dispatchScrollWheelEvent(deltaAxis1, deltaAxis2, deltaAxis3, *(AbsoluteTime*)&now); }
-    inline void setTimerTimeout(IOTimerEventSource* timer, uint64_t time)
-        { timer->setTimeout(*(AbsoluteTime*)&time); }
-    inline void cancelTimer(IOTimerEventSource* timer)
-        { timer->cancelTimeout(); }
-
-public:
-    virtual bool init( OSDictionary * properties ) override;
-    virtual VoodooPS2TouchPadBase * probe( IOService * provider,
-                                               SInt32 *    score ) override = 0;
-    virtual bool start( IOService * provider ) override;
-    virtual void stop( IOService * provider ) override;
-
-    virtual UInt32 deviceType() override;
-    virtual UInt32 interfaceID() override;
-
-	virtual IOReturn setParamProperties(OSDictionary * dict) override;
-    virtual IOReturn setProperties(OSObject *props) override;
-    
-    // Acidanthera VoodooPS2
-    bool handleOpen(IOService *forClient, IOOptionBits options, void *arg) override;
-    void handleClose(IOService *forClient, IOOptionBits options) override;
+/**
+ * struct alps_model_info - touchpad ID table
+ * @signature: E7 response string to match.
+ * @command_mode_resp: For V3/V4 touchpads, the final byte of the EC response
+ *   (aka command mode response) identifies the firmware minor version.  This
+ *   can be used to distinguish different hardware models which are not
+ *   uniquely identifiable through their E7 responses.
+ * @proto_version: Indicates V1/V2/V3/...
+ * @byte0: Helps figure out whether a position report packet matches the
+ *   known format for this model.  The first byte of the report, ANDed with
+ *   mask0, should match byte0.
+ * @mask0: The mask used to check the first byte of the report.
+ * @flags: Additional device capabilities (passthrough port, trackstick, etc.).
+ *
+ * Many (but not all) ALPS touchpads can be identified by looking at the
+ * values returned in the "E7 report" and/or the "EC report."  This table
+ * lists a number of such touchpads.
+ */
+struct alps_model_info {
+    UInt8 signature[3];
+    UInt8 command_mode_resp;
+    UInt16 proto_version;
+    UInt8 byte0, mask0;
+    unsigned int flags;
 };
 
-#endif //__VoodooPS2TouchPadBase_H_
+/**
+ * struct alps_nibble_commands - encodings for register accesses
+ * @command: PS/2 command used for the nibble
+ * @data: Data supplied as an argument to the PS/2 command, if applicable
+ *
+ * The ALPS protocol uses magic sequences to transmit binary data to the
+ * touchpad, as it is generally not OK to send arbitrary bytes out the
+ * PS/2 port.  Each of the sequences in this table sends one nibble of the
+ * register address or (write) data.  Different versions of the ALPS protocol
+ * use slightly different encodings.
+ */
+struct alps_nibble_commands {
+    SInt32 command;
+    UInt8 data;
+};
+
+struct alps_bitmap_point {
+    int start_bit;
+    int num_bits;
+};
+
+struct input_mt_pos {
+    UInt32 x;
+    UInt32 y;
+};
+
+/**
+ * struct alps_fields - decoded version of the report packet
+ * @x_map: Bitmap of active X positions for MT.
+ * @y_map: Bitmap of active Y positions for MT.
+ * @fingers: Number of fingers for MT.
+ * @pressure: Pressure.
+ * @st: position for ST.
+ * @mt: position for MT.
+ * @first_mp: Packet is the first of a multi-packet report.
+ * @is_mp: Packet is part of a multi-packet report.
+ * @left: Left touchpad button is active.
+ * @right: Right touchpad button is active.
+ * @middle: Middle touchpad button is active.
+ * @ts_left: Left trackstick button is active.
+ * @ts_right: Right trackstick button is active.
+ * @ts_middle: Middle trackstick button is active.
+ */
+struct alps_fields {
+    UInt32 x_map;
+    UInt32 y_map;
+    UInt32 fingers;
+    
+    int pressure;
+    struct input_mt_pos st;
+    struct input_mt_pos mt[MAX_TOUCHES];
+    
+    UInt32 first_mp:1;
+    UInt32 is_mp:1;
+    
+    UInt32 left:1;
+    UInt32 right:1;
+    UInt32 middle:1;
+    
+    UInt32 ts_left:1;
+    UInt32 ts_right:1;
+    UInt32 ts_middle:1;
+};
+
+class ALPS;
+
+/**
+ * struct alps_data - private data structure for the ALPS driver
+ * @nibble_commands: Command mapping used for touchpad register accesses.
+ * @addr_command: Command used to tell the touchpad that a register address
+ *   follows.
+ * @proto_version: Indicates V1/V2/V3/...
+ * @byte0: Helps figure out whether a position report packet matches the
+ *   known format for this model.  The first byte of the report, ANDed with
+ *   mask0, should match byte0.
+ * @mask0: The mask used to check the first byte of the report.
+ * @fw_ver: cached copy of firmware version (EC report)
+ * @flags: Additional device capabilities (passthrough port, trackstick, etc.).
+ * @x_max: Largest possible X position value.
+ * @y_max: Largest possible Y position value.
+ * @x_bits: Number of X bits in the MT bitmap.
+ * @y_bits: Number of Y bits in the MT bitmap.
+ * @prev_fin: Finger bit from previous packet.
+ * @multi_packet: Multi-packet data in progress.
+ * @multi_data: Saved multi-packet data.
+ * @f: Decoded packet data fields.
+ * @quirks: Bitmap of ALPS_QUIRK_*.
+ */
+struct alps_data {
+    /* these are autodetected when the device is identified */
+    const struct alps_nibble_commands *nibble_commands;
+    SInt32 addr_command;
+    UInt16 proto_version;
+    UInt8 byte0, mask0;
+    UInt8 fw_ver[3];
+    int flags;
+    SInt32 x_max;
+    SInt32 y_max;
+    SInt32 x_bits;
+    SInt32 y_bits;
+    unsigned int x_res;
+    unsigned int y_res;
+    
+    SInt32 prev_fin;
+    SInt32 multi_packet;
+    int second_touch;
+    UInt8 multi_data[6];
+    struct alps_fields f;
+    UInt8 quirks;
+    bool PSMOUSE_BAD_DATA;
+    
+    int pktsize = 6;
+};
+
+#define ALPS_QUIRK_TRACKSTICK_BUTTONS	1 /* trakcstick buttons in trackstick packet */
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// ALPS Class Declaration
+//
+
+typedef struct ALPSStatus {
+    UInt8 bytes[3];
+} ALPSStatus_t;
+
+#define kPacketLengthSmall  3
+#define kPacketLengthLarge  6
+#define kPacketLengthMax    6
+#define kDP_CommandNibble10 0xf2
+#define BITS_PER_BYTE 8
+
+// predeclure stuff
+struct alps_data;
+
+class EXPORT VoodooPS2AlpsBase : public VoodooPS2TouchPad {
+    typedef VoodooPS2TouchPad super;
+    OSDeclareDefaultStructors( VoodooPS2AlpsBase );
+    
+private:
+    VoodooInputEvent inputEvent;
+    
+public:
+    virtual VoodooPS2AlpsBase * probe(IOService *provider, SInt32 *score) = 0;
+    
+    virtual bool init(OSDictionary * dict);
+    
+    void stop(IOService *provider);
+    
+protected:
+    alps_data priv;
+    int _multiPacket;
+    
+    UInt8 _multiData[6];
+    
+    IOGBounds _bounds;
+    
+    // Interface to device
+    
+    virtual alps_fields* decodePacket(UInt8 *packet) = 0;
+    virtual void processPacket(alps_fields *f) = 0;
+    virtual VoodooInputEvent* handlePacket(alps_fields *f) = 0;
+    virtual void initDevice() = 0;
+    virtual void checkProbe() = 0;
+    
+    // End interface
+    
+    bool deviceSpecificInit();
+    
+    bool resetMouse();
+    
+    int alps_process_bitmap(struct alps_data *priv, struct alps_fields *f);
+    
+    void alps_process_packet_v6(UInt8 *packet);
+    
+    void dispatchEventsWithInfo(int xraw, int yraw, int z, int fingers, UInt32 buttonsraw);
+    
+    void dispatchRelativePointerEventWithPacket(UInt8 *packet, UInt32 packetSize);
+    
+    void setTouchPadEnable(bool enable);
+    
+    PS2InterruptResult interruptOccurred(UInt8 data);
+    
+    void packetReady();
+    
+    bool alps_command_mode_send_nibble(int value);
+    
+    bool alps_command_mode_set_addr(int addr);
+    
+    int alps_command_mode_read_reg(int addr);
+    
+    bool alps_command_mode_write_reg(int addr, UInt8 value);
+    
+    bool alps_command_mode_write_reg(UInt8 value);
+    
+    bool alps_rpt_cmd(SInt32 init_command, SInt32 init_arg, SInt32 repeated_command, ALPSStatus_t *report);
+    
+    bool alps_enter_command_mode();
+    
+    bool alps_exit_command_mode();
+    
+    int alps_monitor_mode_send_word(int word);
+    
+    int alps_monitor_mode_write_reg(int addr, int value);
+    
+    int alps_monitor_mode(bool enable);
+    
+    void alps_absolute_mode_v6();
+    
+    bool alps_get_status(ALPSStatus_t *status);
+    
+    bool alps_tap_mode(bool enable);
+    
+    bool alps_hw_init_v6();
+    
+    IOReturn alps_probe_trackstick_v3_v7(int regBase);
+    
+    bool alps_get_v3_v7_resolution(int reg_pitch);
+    
+    void ps2_command_short(UInt8 command);
+    
+    void ps2_command(unsigned char value, UInt8 command);
+    
+    bool matchTable(ALPSStatus_t *e7, ALPSStatus_t *ec);
+    
+    void restart();
+};
