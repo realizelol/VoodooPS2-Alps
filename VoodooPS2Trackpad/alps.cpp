@@ -23,7 +23,7 @@
 #include "alps.h"
 
 enum {
-    kTapEnabled = 0x01
+    kTapEnabled = 0x00
 };
 
 #define ARRAY_SIZE(x)    (sizeof(x)/sizeof(x[0]))
@@ -112,7 +112,7 @@ static const struct alps_nibble_commands alps_v6_nibble_commands[] = {
 #define ALPS_BUTTONPAD		    0x200	/* device is a clickpad */
 #define ALPS_DUALPOINT_WITH_PRESSURE	0x400	/* device can report trackpoint pressure */
 
-
+// delete APLS_DUALPOINT here?
 static const struct alps_model_info alps_model_data[] = {
     { { 0x32, 0x02, 0x14 }, 0x00, ALPS_PROTO_V2, 0xf8, 0xf8, ALPS_PASS | ALPS_DUALPOINT },
     /* Toshiba Salellite Pro M10 */
@@ -233,12 +233,12 @@ bool ALPS::init(OSDictionary *dict) {
     
     // Default Configuration
     clicking=true;
-    rtap=true;
+    rtap=false;
     dragging=true;
     scroll=true;
     hscroll=true;
-    momentumscroll=true;
-    outzone_wt=palm=palm_wt=true;
+    momentumscroll=false;
+    outzone_wt=palm=palm_wt=false;
     
     return true;
 }
@@ -2817,13 +2817,13 @@ void ALPS::dispatchEventsWithInfo(int xraw, int yraw, int z, int fingers, UInt32
     }
     
     // deal with "OutsidezoneNoAction When Typing"
-    if (outzone_wt && z > z_finger && now_ns - keytime < maxaftertyping &&
-        (x < zonel || x > zoner || y < zoneb || y > zonet)) {
-        DEBUG_LOG("Ignore touch input after typing\n");
+    //if (outzone_wt && z > z_finger && now_ns - keytime < maxaftertyping &&
+    //    (x < zonel || x > zoner || y < zoneb || y > zonet)) {
+    //    DEBUG_LOG("Ignore touch input after typing\n");
         // touch input was shortly after typing and outside the "zone"
         // ignore it...
-        return;
-    }
+    //    return;
+    //}
     
     // if trackpad input is supposed to be ignored, then don't do anything
     if (ignoreall) {

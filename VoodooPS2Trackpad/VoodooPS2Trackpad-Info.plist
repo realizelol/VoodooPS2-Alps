@@ -27,7 +27,7 @@
 			<key>SupportsGestureScrolling</key>
 			<true/>
 			<key>TrackpadFourFingerGestures</key>
-			<false/>
+			<true/>
 			<key>ApplePreferenceIdentifier</key>
 			<string>com.apple.AppleMultitouchTrackpad</string>
 			<key>MTHIDDevice</key>
