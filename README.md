@@ -29,7 +29,12 @@ Lots of code cleanups, refactoring.
 Clean up the IOLog.
 
 
-## I don't know what I've done but the hung up after a key press was released.
-## But --> you don't have any settings in systemsettings -> touchpad.
+# SET QuietTimeAfterTyping to 0 than this stupid delay after releasing
+# CTRL + ALT + SUPER (WinKey)
+
+## Settings are working sometimes .. I've raised the IOProbeScore to 8000
+## But maybe we should set it to 1500 like it's set in:
+## https://github.com/acidanthera/VoodooPS2/blob/master/VoodooPS2Trackpad/VoodooPS2Trackpad-Info.plist#L32
+## for ALPS GlidePoint // 6000 seems to be for Synaptics..
 
 # THANKS TO [1Revenger1](https://github.com/1Revenger1/VoodooPS2-Alps/)
